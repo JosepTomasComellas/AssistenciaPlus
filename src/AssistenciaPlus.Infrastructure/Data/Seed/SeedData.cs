@@ -11,8 +11,6 @@ public static class SeedData
 {
     public static async Task InitializeAsync(AppDbContext context)
     {
-        await context.Database.MigrateAsync();
-
         await SeedCiclesICursosAsync(context);
         await SeedFranjesHorariesAsync(context);
         await SeedAdminUsuariAsync(context);

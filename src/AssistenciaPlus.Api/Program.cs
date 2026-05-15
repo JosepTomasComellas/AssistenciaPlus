@@ -48,6 +48,7 @@ try
             builder.Configuration.GetConnectionString("DefaultConnection"),
             npgsql => npgsql.MigrationsAssembly("AssistenciaPlus.Infrastructure")
         )
+        .UseSnakeCaseNamingConvention()
         .EnableSensitiveDataLogging(builder.Environment.IsDevelopment())
     );
 
