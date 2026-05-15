@@ -4,6 +4,8 @@ WORKDIR /src
 
 # Copiar fitxers de projecte per aprofitar la caché de NuGet
 COPY AssistenciaPlus.Core/AssistenciaPlus.Core.csproj AssistenciaPlus.Core/
+COPY AssistenciaPlus.Domain/AssistenciaPlus.Domain.csproj AssistenciaPlus.Domain/
+COPY AssistenciaPlus.Application/AssistenciaPlus.Application.csproj AssistenciaPlus.Application/
 COPY AssistenciaPlus.Infrastructure/AssistenciaPlus.Infrastructure.csproj AssistenciaPlus.Infrastructure/
 COPY AssistenciaPlus.Shared/AssistenciaPlus.Shared.csproj AssistenciaPlus.Shared/
 COPY AssistenciaPlus.Api/AssistenciaPlus.Api.csproj AssistenciaPlus.Api/
