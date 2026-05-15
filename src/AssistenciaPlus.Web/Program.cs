@@ -34,6 +34,7 @@ builder.Services.AddScoped<AlumnesService>();
 builder.Services.AddScoped<AssistenciaService>();
 builder.Services.AddScoped<InformesService>();
 builder.Services.AddScoped<ConfiguracioService>();
+builder.Services.AddScoped<SignalRService>();
 
 // MudBlazor
 builder.Services.AddMudServices(config =>

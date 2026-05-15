@@ -228,7 +228,7 @@ try
 
     app.MapControllers();
     app.MapHealthChecks("/health");
-    app.MapHub<AttendanceHub>("/hubs/assistencia");
+    app.MapHub<AttendanceHub>("/hubs/assistencia").RequireAuthorization();
 
     Log.Information("AssistenciaPlus API iniciada. Entorn: {Env}", app.Environment.EnvironmentName);
     await app.RunAsync();

@@ -80,6 +80,9 @@ public class AuthService
         return JsonSerializer.Deserialize<UsuariModel>(json, _jsonOptions);
     }
 
+    public async Task<string?> GetTokenAsync()
+        => await _localStorage.GetItemAsStringAsync("jwt_token");
+
     public async Task<bool> CanviarContrasenyaAsync(string actual, string nova)
     {
         var dto = new CanviContrasenyaModel

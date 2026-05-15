@@ -3,8 +3,10 @@
 @inject GrupService GrupService
 @inject AlumnesService AlumnesService
 @inject AssistenciaService AssistenciaService
+@inject SignalRService SignalR
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@implements IAsyncDisposable
 
 <PageTitle>Passar llista — AssistenciaPlus</PageTitle>
 
@@ -254,6 +256,9 @@ else if (_fase == Fase.PassarLlista)
         _grups = await GrupService.GetGrupsAsync();
         _franjes = await GrupService.GetFranjesAsync();
 
+        // Connectar SignalR en segon pla (no bloqueja la càrrega)
+        _ = ConnectarSignalRAsync();
+
         // Si ve un grupId per QueryString, anar directament a la selecció de franja
         if (GrupId.HasValue)
         {
@@ -265,11 +270,39 @@ else if (_fase == Fase.PassarLlista)
         _carregant = false;
     }
 
+    private async Task ConnectarSignalRAsync()
+    {
+        try
+        {
+            await SignalR.ConnectarAsync();
+            SignalR.AssistenciaActualitzada += OnAssistenciaActualitzada;
+        }
+        catch
+        {
+            // SignalR no és crític — si falla, la pàgina continua funcionant
+        }
+    }
+
+    private void OnAssistenciaActualitzada(string sessionId, string groupId)
+    {
+        if (_grupSeleccionat?.Id.ToString() == groupId)
+        {
+            Snackbar.Add("Un altre mestre ha actualitzat l'assistència d'aquest grup",
+                Severity.Info, c => c.Icon = Icons.Material.Filled.Sync);
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
     private async Task SeleccionarGrup(GrupModel grup)
     {
+        if (_grupSeleccionat != null)
+            await SignalR.AbandonarGrupAsync(_grupSeleccionat.Id);
+
         _grupSeleccionat = grup;
         _registresAvui = await AssistenciaService.GetRegistresAsync(
             grup.Id, DateOnly.FromDateTime(DateTime.Today));
+
+        await SignalR.UnirseAlGrupAsync(grup.Id);
         ActualitzarBreadcrumbs();
         _fase = Fase.SeleccionarFranja;
     }
@@ -346,6 +379,13 @@ else if (_fase == Fase.PassarLlista)
         }
 
         _desant = false;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        SignalR.AssistenciaActualitzada -= OnAssistenciaActualitzada;
+        if (_grupSeleccionat != null)
+            await SignalR.AbandonarGrupAsync(_grupSeleccionat.Id);
     }
 
     private void ActualitzarBreadcrumbs()
