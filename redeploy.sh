@@ -9,7 +9,10 @@ cd "$DEPLOY_PATH"
 echo "→ Obtenint canvis..."
 git pull origin main
 
-echo "→ Assegurant que tots els serveis estan en marxa..."
+echo "→ Aturant api i web..."
+docker compose stop api web
+
+echo "→ Reconstruint i iniciant api i web..."
 docker compose up -d --build api web
 
 echo "→ Iniciant serveis auxiliars si no estan en marxa..."
