@@ -108,7 +108,8 @@
                         <div class="d-flex align-center gap-2">
                             @if (!string.IsNullOrEmpty(context.FotoPath))
                             {
-                                <MudAvatar Size="Size.Small" Image="@context.FotoPath" />
+                                <img src="@context.FotoPath" alt=""
+                                    style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0" />
                             }
                             else
                             {
@@ -250,8 +251,8 @@
                         <div class="d-flex align-center gap-3">
                             @if (!string.IsNullOrEmpty(_editantAlumne.FotoPath))
                             {
-                                <MudAvatar Size="Size.Large" Image="@_editantAlumne.FotoPath"
-                                    Style="width:64px;height:64px" />
+                                <img src="@_editantAlumne.FotoPath" alt=""
+                                    style="width:64px;height:64px;border-radius:50%;object-fit:cover;flex-shrink:0" />
                             }
                             else
                             {
