@@ -2,6 +2,7 @@ using AssistenciaPlus.Application.Common;
 using AssistenciaPlus.Application.DTOs;
 using AssistenciaPlus.Application.Interfaces;
 using AssistenciaPlus.Core.Interfaces;
+using AssistenciaPlus.Infrastructure.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,17 +15,20 @@ public class InformesController : ControllerBase
 {
     private readonly IInformesService _informesService;
     private readonly IEmailService _emailService;
+    private readonly InformesExcelService _excelService;
     private readonly IConfiguration _config;
     private readonly ILogger<InformesController> _logger;
 
     public InformesController(
         IInformesService informesService,
         IEmailService emailService,
+        InformesExcelService excelService,
         IConfiguration config,
         ILogger<InformesController> logger)
     {
         _informesService = informesService;
         _emailService = emailService;
+        _excelService = excelService;
         _config = config;
         _logger = logger;
     }
@@ -103,6 +107,47 @@ public class InformesController : ControllerBase
             informe.GrupNom, dto.Mes, dto.Any);
 
         return Ok(ApiResponse.Ok());
+    }
+
+    // ── Exportació Excel ─────────────────────────────────────
+
+    /// <summary>Descarrega l'informe mensual en format Excel.</summary>
+    [HttpGet("export-excel/mensual/grup/{grupId:guid}")]
+    public async Task<IActionResult> ExportExcelMensualGrup(
+        Guid grupId, [FromQuery] int any, [FromQuery] int mes, CancellationToken ct)
+    {
+        if (mes < 1 || mes > 12)
+            return BadRequest("El mes ha de ser entre 1 i 12");
+
+        var informe = await _informesService.GenerarInformeMensualGrupAsync(grupId, any, mes, ct);
+        var bytes = _excelService.ExportarInformeMensual(informe);
+
+        var nomMes = new System.Globalization.CultureInfo("ca-ES")
+            .DateTimeFormat.GetMonthName(mes);
+        var nomFitxer = $"assistencia_{informe.GrupNom?.Replace(" ", "_")}_{nomMes}_{any}.xlsx";
+
+        return File(bytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            nomFitxer);
+    }
+
+    /// <summary>Descarrega l'informe trimestral en format Excel.</summary>
+    [HttpGet("export-excel/trimestral/grup/{grupId:guid}")]
+    public async Task<IActionResult> ExportExcelTrimestralGrup(
+        Guid grupId, [FromQuery] int trimestre, [FromQuery] Guid anyAcademicId, CancellationToken ct)
+    {
+        if (trimestre < 1 || trimestre > 3)
+            return BadRequest("El trimestre ha de ser 1, 2 o 3");
+
+        var informe = await _informesService.GenerarInformeTrimestralGrupAsync(
+            grupId, trimestre, anyAcademicId, ct);
+        var bytes = _excelService.ExportarInformeTrimestral(informe);
+
+        var nomFitxer = $"assistencia_{informe.GrupNom?.Replace(" ", "_")}_T{trimestre}.xlsx";
+
+        return File(bytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            nomFitxer);
     }
 
     // ── Helpers ─────────────────────────────────────────────

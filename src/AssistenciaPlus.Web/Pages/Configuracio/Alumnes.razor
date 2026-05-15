@@ -146,6 +146,17 @@
     }
 }
 
+<!-- Confirmació d'esborrat -->
+<MudMessageBox @ref="_confirmBox" Title="Confirmar esborrat" CancelText="Cancel·lar">
+    <MessageContent>@_confirmMissatge</MessageContent>
+    <YesButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error"
+            StartIcon="@Icons.Material.Filled.DeleteForever">
+            Sí, esborrar
+        </MudButton>
+    </YesButton>
+</MudMessageBox>
+
 <!-- Dialog crear grup -->
 <MudDialog @bind-Visible="_dialogGrupObert" Options="@_dialogOptions">
     <TitleContent>
@@ -250,6 +261,10 @@
     private bool _desant;
     private AlumneModel? _editantAlumne;
 
+    // Confirmació
+    private MudMessageBox? _confirmBox;
+    private string _confirmMissatge = string.Empty;
+
     // Formulari grup
     private Guid _formGrupCursId = Guid.Empty;
     private string _formGrupLletra = string.Empty;
@@ -312,6 +327,13 @@
 
     private async Task EsborrarGrupAsync(Guid id)
     {
+        var grup = _grups.FirstOrDefault(g => g.Id == id);
+        var nomGrup = grup?.NomComplet ?? "aquest grup";
+
+        _confirmMissatge = $"Segur que vols esborrar el grup «{nomGrup}»? Aquesta acció no es pot desfer.";
+        var confirm = await _confirmBox!.ShowAsync();
+        if (confirm != true) return;
+
         var (ok, error) = await ConfiguracioService.EsborrarGrupAsync(id);
         if (ok)
         {

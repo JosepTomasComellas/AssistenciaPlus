@@ -2,7 +2,9 @@
 @attribute [Authorize(Roles = "EquipDirectiu,Administratiu")]
 @inject GrupService GrupService
 @inject InformesService InformesService
+@inject ConfiguracioService ConfiguracioService
 @inject ISnackbar Snackbar
+@inject IJSRuntime JS
 
 <PageTitle>Informes — AssistenciaPlus</PageTitle>
 
@@ -95,7 +97,19 @@
 </MudPaper>
 
 <!-- Resultats -->
-@if (_informe != null)
+@{
+    var alumnesInforme = _tipusInforme == "mensual"
+        ? _informe?.Alumnes
+        : _informeTrimestral?.Alumnes;
+    var titolInforme = _tipusInforme == "mensual" ? _informe?.Titol : _informeTrimestral?.Titol;
+    var anyAcademicInforme = _tipusInforme == "mensual"
+        ? _informe?.AnyAcademic : _informeTrimestral?.AnyAcademic;
+    var totalAlumnesInforme = _tipusInforme == "mensual"
+        ? _informe?.TotalAlumnes : _informeTrimestral?.TotalAlumnes;
+    var hiHaResultats = alumnesInforme != null;
+}
+
+@if (hiHaResultats && alumnesInforme != null)
 {
     <MudPaper Elevation="1" Class="pa-5" Style="border-radius:12px">
 
@@ -103,33 +117,45 @@
         <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-5">
             <div>
                 <MudText Typo="Typo.h5" Style="font-weight:700">
-                    @_informe.Titol
+                    @titolInforme
                 </MudText>
                 <MudText Typo="Typo.body2" Style="color:#718096">
-                    @_informe.AnyAcademic ·
+                    @anyAcademicInforme ·
                     @if (_tipusInforme == "mensual")
                     {
                         <span>@_mesos.FirstOrDefault(m => m.Num == _mes).Nom @_any</span>
                     }
                     else
                     {
-                        <span>@(_trimestre)r trimestre</span>
+                        <span>@(_trimestre)r trimestre (@_informeTrimestral?.DataInici.ToString("dd/MM") – @_informeTrimestral?.DataFi.ToString("dd/MM/yyyy"))</span>
                     }
-                    · @_informe.TotalAlumnes alumnes
+                    · @totalAlumnesInforme alumnes
                 </MudText>
             </div>
-            <AuthorizeView Roles="EquipDirectiu">
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
-                    StartIcon="@Icons.Material.Filled.Email"
-                    OnClick="EnviarInformeAsync"
-                    Disabled="_enviant">
-                    @if (_enviant)
+            <div class="d-flex gap-2 flex-wrap">
+                <MudButton Variant="Variant.Outlined" Color="Color.Success"
+                    StartIcon="@Icons.Material.Filled.TableView"
+                    OnClick="ExportarExcelAsync"
+                    Disabled="_exportant">
+                    @if (_exportant)
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                     }
-                    Enviar per correu
+                    Exportar Excel
                 </MudButton>
-            </AuthorizeView>
+                <AuthorizeView Roles="EquipDirectiu">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                        StartIcon="@Icons.Material.Filled.Email"
+                        OnClick="EnviarInformeAsync"
+                        Disabled="_enviant">
+                        @if (_enviant)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Enviar per correu
+                    </MudButton>
+                </AuthorizeView>
+            </div>
         </div>
 
         <!-- Estadístiques globals -->
@@ -138,7 +164,7 @@
                 <MudPaper Class="pa-4 text-center" Elevation="0"
                     Style="background:#F0FFF4;border-radius:8px">
                     <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">
-                        @_informe.Alumnes.Count(a => !a.EsAlerta)
+                        @alumnesInforme.Count(a => !a.EsAlerta)
                     </MudText>
                     <MudText Typo="Typo.caption" Style="color:#718096">Sense alertes</MudText>
                 </MudPaper>
@@ -147,7 +173,7 @@
                 <MudPaper Class="pa-4 text-center" Elevation="0"
                     Style="background:#FFFBF0;border-radius:8px">
                     <MudText Typo="Typo.h4" Style="font-weight:700;color:#F57F17">
-                        @_informe.Alumnes.Count(a => a.EsAlerta && !a.EsCritic)
+                        @alumnesInforme.Count(a => a.EsAlerta && !a.EsCritic)
                     </MudText>
                     <MudText Typo="Typo.caption" Style="color:#718096">En alerta (&gt;10%)</MudText>
                 </MudPaper>
@@ -156,7 +182,7 @@
                 <MudPaper Class="pa-4 text-center" Elevation="0"
                     Style="background:#FFF5F5;border-radius:8px">
                     <MudText Typo="Typo.h4" Style="font-weight:700;color:#C62828">
-                        @_informe.Alumnes.Count(a => a.EsCritic)
+                        @alumnesInforme.Count(a => a.EsCritic)
                     </MudText>
                     <MudText Typo="Typo.caption" Style="color:#718096">Situació crítica (&gt;25%)</MudText>
                 </MudPaper>
@@ -165,8 +191,8 @@
                 <MudPaper Class="pa-4 text-center" Elevation="0"
                     Style="background:#EBF4FF;border-radius:8px">
                     @{
-                        var mitjana = _informe.Alumnes.Any()
-                            ? _informe.Alumnes.Average(a => (double)a.PercentatgeAbsencia)
+                        var mitjana = alumnesInforme.Any()
+                            ? alumnesInforme.Average(a => (double)a.PercentatgeAbsencia)
                             : 0;
                     }
                     <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">
@@ -178,7 +204,7 @@
         </MudGrid>
 
         <!-- Taula d'alumnes -->
-        <MudTable Items="_informe.Alumnes.OrderByDescending(a => a.PercentatgeAbsencia)"
+        <MudTable Items="alumnesInforme.OrderByDescending(a => a.PercentatgeAbsencia)"
             Hover="true" Dense="false" Striped="true"
             Style="border-radius:8px;overflow:hidden">
             <HeaderContent>
@@ -236,13 +262,16 @@ else if (_errorInforme != null)
     private string _tipusInforme = "mensual";
     private List<GrupModel> _grups = [];
     private Guid? _grupSeleccionat;
+    private Guid _anyAcademicId;
     private int _any = DateTime.Now.Year;
     private int _mes = DateTime.Now.Month;
     private int _trimestre = (DateTime.Now.Month - 1) / 3 + 1;
     private bool _carregantGrups = true;
     private bool _generant;
     private bool _enviant;
+    private bool _exportant;
     private InformeMensualModel? _informe;
+    private InformeTrimestralModel? _informeTrimestral;
     private string? _errorInforme;
 
     private readonly (int Num, string Nom)[] _mesos =
@@ -257,6 +286,12 @@ else if (_errorInforme != null)
         _grups = await GrupService.GetGrupsAsync();
         if (_grups.Count == 1)
             _grupSeleccionat = _grups[0].Id;
+
+        var anys = await ConfiguracioService.GetAnysAcademicsAsync();
+        var anyActiu = anys.FirstOrDefault(a => a.EsActiu);
+        if (anyActiu != null)
+            _anyAcademicId = anyActiu.Id;
+
         _carregantGrups = false;
     }
 
@@ -267,14 +302,31 @@ else if (_errorInforme != null)
         _generant = true;
         _errorInforme = null;
         _informe = null;
+        _informeTrimestral = null;
 
         try
         {
-            _informe = await InformesService.GetInformeMensualGrupAsync(
-                _grupSeleccionat.Value, _any, _mes);
-
-            if (_informe == null)
-                _errorInforme = "No s'ha pogut generar l'informe. Comproveu els filtres.";
+            if (_tipusInforme == "mensual")
+            {
+                _informe = await InformesService.GetInformeMensualGrupAsync(
+                    _grupSeleccionat.Value, _any, _mes);
+                if (_informe == null)
+                    _errorInforme = "No s'ha pogut generar l'informe. Comproveu els filtres.";
+            }
+            else
+            {
+                if (_anyAcademicId == Guid.Empty)
+                {
+                    _errorInforme = "No hi ha cap any acadèmic actiu.";
+                }
+                else
+                {
+                    _informeTrimestral = await InformesService.GetInformeTrimestralGrupAsync(
+                        _grupSeleccionat.Value, _trimestre, _anyAcademicId);
+                    if (_informeTrimestral == null)
+                        _errorInforme = "No s'ha pogut generar l'informe trimestral.";
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -282,6 +334,37 @@ else if (_errorInforme != null)
         }
 
         _generant = false;
+    }
+
+    private async Task ExportarExcelAsync()
+    {
+        if (!_grupSeleccionat.HasValue) return;
+        if (_tipusInforme == "mensual" && _informe == null) return;
+        if (_tipusInforme == "trimestral" && _informeTrimestral == null) return;
+
+        _exportant = true;
+        try
+        {
+            byte[]? data; string? nom; string? error;
+
+            if (_tipusInforme == "mensual")
+                (data, nom, error) = await InformesService.ExportarExcelMensualAsync(
+                    _grupSeleccionat.Value, _any, _mes);
+            else
+                (data, nom, error) = await InformesService.ExportarExcelTrimestralAsync(
+                    _grupSeleccionat.Value, _trimestre, _anyAcademicId);
+
+            if (data != null)
+                await JS.InvokeVoidAsync("downloadFile", nom,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", data);
+            else
+                Snackbar.Add(error ?? "Error en l'exportació", Severity.Error);
+        }
+        catch
+        {
+            Snackbar.Add("Error en descarregar l'Excel", Severity.Error);
+        }
+        _exportant = false;
     }
 
     private async Task EnviarInformeAsync()

@@ -178,6 +178,17 @@ else
     </MudPaper>
 }
 
+<!-- Confirmació d'esborrat -->
+<MudMessageBox @ref="_confirmBox" Title="Confirmar esborrat" CancelText="Cancel·lar">
+    <MessageContent>@_confirmMissatge</MessageContent>
+    <YesButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error"
+            StartIcon="@Icons.Material.Filled.DeleteForever">
+            Sí, esborrar
+        </MudButton>
+    </YesButton>
+</MudMessageBox>
+
 <!-- Dialog: Nou any acadèmic -->
 <MudDialog @bind-Visible="_dialogObert" Options="@_dialogOptions">
     <TitleContent>
@@ -315,6 +326,10 @@ else
     private DateTime? _formFiT2;
     private DateTime? _formIniciT3;
     private DateTime? _formFiT3;
+
+    // Confirmació
+    private MudMessageBox? _confirmBox;
+    private string _confirmMissatge = string.Empty;
 
     // Cicle
     private CicleModel? _editantCicle;
@@ -488,6 +503,10 @@ else
 
     private async Task EsborrarCicleAsync(CicleModel cicle)
     {
+        _confirmMissatge = $"Segur que vols esborrar el cicle «{cicle.Nom}»? Aquesta acció no es pot desfer.";
+        var confirm = await _confirmBox!.ShowAsync();
+        if (confirm != true) return;
+
         var (ok, error) = await ConfiguracioService.EsborrarCicleAsync(cicle.Id);
         if (ok)
         {
