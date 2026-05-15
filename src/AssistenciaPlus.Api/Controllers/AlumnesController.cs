@@ -1,3 +1,4 @@
+using AssistenciaPlus.Api.Helpers;
 using AssistenciaPlus.Application.Common;
 using AssistenciaPlus.Application.DTOs;
 using AssistenciaPlus.Application.Interfaces;
@@ -140,22 +141,15 @@ public class AlumnesController : BaseApiController
         var alumne = await _alumneRepo.GetByIdAsync(id, ct);
         if (alumne == null) return NotFound(ApiResponse<string>.Fail("Alumne no trobat"));
 
-        var ext = foto.ContentType.ToLower() switch
-        {
-            "image/png" => ".png",
-            "image/webp" => ".webp",
-            _ => ".jpg"
-        };
-
         var dirFotos = Path.Combine(_env.ContentRootPath, "uploads", "alumnes");
         Directory.CreateDirectory(dirFotos);
 
         foreach (var antic in Directory.GetFiles(dirFotos, $"{id}.*"))
             System.IO.File.Delete(antic);
 
-        var nomFitxer = $"{id}{ext}";
-        await using (var stream = System.IO.File.Create(Path.Combine(dirFotos, nomFitxer)))
-            await foto.CopyToAsync(stream, ct);
+        var nomFitxer = $"{id}.jpg";
+        using var stream = foto.OpenReadStream();
+        await FotoHelper.ResitzarIGuardarAsync(stream, Path.Combine(dirFotos, nomFitxer), ct);
 
         alumne.FotoPath = $"/uploads/alumnes/{nomFitxer}";
         await _alumneRepo.ActualitzarAsync(alumne, ct);
