@@ -17,7 +17,7 @@
 
   <ItemGroup>
     <!-- Auth -->
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.1" />
 
     <!-- Swagger -->
     <PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.0" />

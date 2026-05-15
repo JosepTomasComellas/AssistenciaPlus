@@ -20,13 +20,13 @@
     <PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
 
     <!-- Blazor WASM runtime (explícit a .NET 10) -->
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.1" />
 
     <!-- HTTP client -->
-    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
 
     <!-- SignalR client -->
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.1" />
   </ItemGroup>
 
   <ItemGroup>
