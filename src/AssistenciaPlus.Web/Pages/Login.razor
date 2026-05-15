@@ -6,11 +6,6 @@
 
 <PageTitle>Iniciar sessió — AssistenciaPlus</PageTitle>
 
-<MudThemeProvider Theme="@_theme" />
-<MudSnackbarProvider />
-<MudDialogProvider />
-<MudPopoverProvider />
-
 <div class="login-bg">
     <MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="d-flex flex-column align-center justify-center"
         Style="min-height:100vh">
@@ -117,7 +112,6 @@
 </style>
 
 @code {
-    private readonly MudTheme _theme = AppTheme.Create();
 
     private LoginForm _form = new();
     private bool _loading;
