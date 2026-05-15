@@ -161,8 +161,7 @@ public static class SeedData
             Nom = "Administrador",
             Cognom1 = "Sistema",
             Email = "admin@escola.cat",
-            // BCrypt hash de "Admin1234!"
-            PasswordHash = "$2a$12$LQv3c1yqBwEHXp3Z9Kq5ZuQZQ5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5",
+            PasswordHash = "$2a$12$yH271dKnnTywNUgRjsTyxO1PvC15D8MUoeSkf4JRYS2MT65GMyNwy",
             Rol = RolUsuari.EquipDirectiu,
             EsActiu = true,
             Idioma = "ca"
