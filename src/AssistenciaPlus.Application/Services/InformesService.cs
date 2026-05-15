@@ -249,9 +249,9 @@ public class InformesService : IInformesService
     private static (DateOnly inici, DateOnly fi) GetRangTrimestre(AnyAcademic anyAcademic, int trimestre)
         => trimestre switch
         {
-            1 => (anyAcademic.IniciFT1, anyAcademic.FiT1),
-            2 => (anyAcademic.IniciFT2, anyAcademic.FiT2),
-            3 => (anyAcademic.IniciFT3, anyAcademic.FiT3),
+            1 => (anyAcademic.IniciT1, anyAcademic.FiT1),
+            2 => (anyAcademic.IniciT2, anyAcademic.FiT2),
+            3 => (anyAcademic.IniciT3, anyAcademic.FiT3),
             _ => throw new ArgumentException($"Trimestre invàlid: {trimestre}. Ha de ser 1, 2 o 3.")
         };
 }

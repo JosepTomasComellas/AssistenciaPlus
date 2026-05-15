@@ -15,12 +15,12 @@ public class AnyAcademic : BaseEntity
     /// <summary>Any acadèmic actiu en curs</summary>
     public bool EsActiu { get; set; } = false;
 
-    // Definició dels trimestres
-    public DateOnly IniciFT1 { get; set; }
+    // Definició dels trimestres (mapa BD: inici_t1, fi_t1, inici_t2, fi_t2, inici_t3, fi_t3)
+    public DateOnly IniciT1 { get; set; }
     public DateOnly FiT1 { get; set; }
-    public DateOnly IniciFT2 { get; set; }
+    public DateOnly IniciT2 { get; set; }
     public DateOnly FiT2 { get; set; }
-    public DateOnly IniciFT3 { get; set; }
+    public DateOnly IniciT3 { get; set; }
     public DateOnly FiT3 { get; set; }
 
     // Navegació

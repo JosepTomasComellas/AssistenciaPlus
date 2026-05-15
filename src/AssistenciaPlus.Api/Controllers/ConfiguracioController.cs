@@ -239,11 +239,11 @@ public class ConfiguracioController : ControllerBase
         DataInici = a.DataInici,
         DataFi = a.DataFi,
         EsActiu = a.EsActiu,
-        IniciFT1 = a.IniciFT1,
+        IniciFT1 = a.IniciT1,
         FiT1 = a.FiT1,
-        IniciFT2 = a.IniciFT2,
+        IniciFT2 = a.IniciT2,
         FiT2 = a.FiT2,
-        IniciFT3 = a.IniciFT3,
+        IniciFT3 = a.IniciT3,
         FiT3 = a.FiT3
     };
 

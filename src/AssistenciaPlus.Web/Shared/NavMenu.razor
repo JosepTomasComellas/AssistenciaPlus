@@ -17,7 +17,7 @@
     <MudDivider Class="my-2" />
 
     <!-- Informes (EquipDirectiu i Administratiu) -->
-    <AuthorizeView Policy="NomesEquipDirectiuIAdministratiu">
+    <AuthorizeView Roles="EquipDirectiu,Administratiu">
         <MudNavLink Href="/informes"
             Icon="@Icons.Material.Filled.BarChart">
             Informes
