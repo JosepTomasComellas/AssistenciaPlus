@@ -1,11 +1,14 @@
 using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using AssistenciaPlus.Infrastructure.Data;
 
 #nullable disable
 
 namespace AssistenciaPlus.Infrastructure.Data.Migrations;
 
-/// <inheritdoc />
+[DbContext(typeof(AppDbContext))]
+[Migration("20250515000000_InitialCreate")]
 public partial class InitialCreate : Migration
 {
     /// <inheritdoc />
