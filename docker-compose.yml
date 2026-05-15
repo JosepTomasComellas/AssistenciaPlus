@@ -1,5 +1,3 @@
-version: "3.9"
-
 # =============================================================
 # AssistenciaPlus - Docker Compose
 # Serveis: nginx, web, api, db (PostgreSQL), redis, ollama
