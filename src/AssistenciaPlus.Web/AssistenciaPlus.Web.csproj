@@ -20,7 +20,6 @@
     <PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
 
     <!-- HTTP client -->
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
 
     <!-- SignalR client -->
