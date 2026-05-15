@@ -1,19 +1,200 @@
 @page "/"
+@attribute [Authorize]
+@inject AuthService AuthService
+@inject GrupService GrupService
+@inject AssistenciaService AssistenciaService
 
-<PageTitle>AssistenciaPlus</PageTitle>
+<PageTitle>Inici — AssistenciaPlus</PageTitle>
 
-<MudPaper Class="pa-8 ma-4" Elevation="2">
-    <MudStack AlignItems="AlignItems.Center" Spacing="4">
-        <MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Large" Color="Color.Primary" Style="font-size:4rem;" />
-        <MudText Typo="Typo.h4" Color="Color.Primary">AssistenciaPlus</MudText>
-        <MudText Typo="Typo.h6" Color="Color.Secondary">Gestió d'assistència escolar</MudText>
-        <MudDivider />
-        <MudText Typo="Typo.body1" Align="Align.Center">
-            El frontend de l'aplicació s'està desenvolupant.<br />
-            L'API REST ja és operativa.
+<!-- Capçalera de benvinguda -->
+<div class="mb-6">
+    <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">
+        Bon @_salutacio, @_nomUsuari
+    </MudText>
+    <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
+        @_dataAvui
+    </MudText>
+</div>
+
+@if (_carregant)
+{
+    <MudGrid>
+        @for (int i = 0; i < 3; i++)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="160px"
+                    Class="rounded-lg" />
+            </MudItem>
+        }
+    </MudGrid>
+}
+else if (!_grups.Any())
+{
+    <MudPaper Class="pa-8 d-flex flex-column align-center" Elevation="0"
+        Style="border:2px dashed #E2E8F0;border-radius:12px">
+        <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Large"
+            Style="font-size:3rem;color:#CBD5E0" Class="mb-3" />
+        <MudText Typo="Typo.h6" Style="color:#718096">Cap grup assignat</MudText>
+        <MudText Typo="Typo.body2" Style="color:#A0AEC0" Align="Align.Center">
+            L'equip directiu t'ha d'assignar els grups corresponents
         </MudText>
-        <MudChip T="string" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">
-            API operativa
-        </MudChip>
-    </MudStack>
-</MudPaper>
+    </MudPaper>
+}
+else
+{
+    <!-- Grups del mestre -->
+    <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:600">
+        Els meus grups avui
+    </MudText>
+    <MudGrid Class="mb-6">
+        @foreach (var grup in _grups)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="2" Class="grup-card cursor-pointer"
+                    @onclick="() => NavigarPassarLlista(grup.Id)">
+                    <MudCardContent Class="pa-5">
+                        <div class="d-flex align-center justify-space-between mb-3">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary"
+                                Style="font-weight:700;font-size:0.85rem">
+                                @grup.CursCodi
+                            </MudChip>
+                            @if (grup.UsaModeFusteta)
+                            {
+                                <MudTooltip Text="Mode Fusteta Digital disponible">
+                                    <MudIcon Icon="@Icons.Material.Filled.GridView"
+                                        Color="Color.Secondary" Size="Size.Small" />
+                                </MudTooltip>
+                            }
+                        </div>
+                        <MudText Typo="Typo.h5" Style="font-weight:700;color:#1A2744">
+                            @grup.NomComplet
+                        </MudText>
+                        <MudText Typo="Typo.body2" Style="color:#718096" Class="mt-1">
+                            @grup.CicleNom · @grup.NombreAlumnes alumnes
+                        </MudText>
+                    </MudCardContent>
+                    <MudCardActions Class="px-5 pb-4">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                            StartIcon="@Icons.Material.Filled.Checklist"
+                            Size="Size.Small" FullWidth="true">
+                            Passar llista
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+
+    <!-- Resum estadístic del dia -->
+    <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:600">
+        Resum d'avui
+    </MudText>
+    <MudGrid>
+        <MudItem xs="6" sm="3">
+            <MudPaper Class="pa-4 text-center" Elevation="1"
+                Style="border-radius:12px;border-left:4px solid #003F8A">
+                <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">
+                    @_grups.Sum(g => g.NombreAlumnes)
+                </MudText>
+                <MudText Typo="Typo.caption" Style="color:#718096;text-transform:uppercase;letter-spacing:0.05em">
+                    Total alumnes
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Class="pa-4 text-center" Elevation="1"
+                Style="border-radius:12px;border-left:4px solid #2E7D32">
+                <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">
+                    @_grups.Count
+                </MudText>
+                <MudText Typo="Typo.caption" Style="color:#718096;text-transform:uppercase;letter-spacing:0.05em">
+                    Grups
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Class="pa-4 text-center" Elevation="1"
+                Style="border-radius:12px;border-left:4px solid #E05B1A">
+                <MudText Typo="Typo.h4" Style="font-weight:700;color:#E05B1A">
+                    @_llistesPassades
+                </MudText>
+                <MudText Typo="Typo.caption" Style="color:#718096;text-transform:uppercase;letter-spacing:0.05em">
+                    Llistes fetes
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Class="pa-4 text-center" Elevation="1"
+                Style="border-radius:12px;border-left:4px solid #C62828">
+                <MudText Typo="Typo.h4" Style="font-weight:700;color:#C62828">
+                    @_totalAbsents
+                </MudText>
+                <MudText Typo="Typo.caption" Style="color:#718096;text-transform:uppercase;letter-spacing:0.05em">
+                    Absències avui
+                </MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+<style>
+    .grup-card {
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        border-radius: 12px !important;
+    }
+    .grup-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(0,63,138,0.15) !important;
+    }
+    .cursor-pointer { cursor: pointer; }
+</style>
+
+@code {
+    private List<GrupModel> _grups = [];
+    private bool _carregant = true;
+    private string _nomUsuari = string.Empty;
+    private string _salutacio = "dia";
+    private string _dataAvui = string.Empty;
+    private int _llistesPassades;
+    private int _totalAbsents;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await AuthService.GetCurrentUserAsync();
+        _nomUsuari = user?.Nom ?? string.Empty;
+
+        var hora = DateTime.Now.Hour;
+        _salutacio = hora < 12 ? "dia" : hora < 20 ? "tarda" : "vespre";
+
+        var info = System.Globalization.CultureInfo.GetCultureInfo("ca-ES");
+        _dataAvui = DateTime.Today.ToString("dddd, d MMMM yyyy", info);
+        // Capitalitzar primer caràcter
+        if (_dataAvui.Length > 0)
+            _dataAvui = char.ToUpper(_dataAvui[0]) + _dataAvui[1..];
+
+        _grups = await GrupService.GetGrupsAsync();
+
+        // Comptar llistes i absències d'avui
+        var avui = DateOnly.FromDateTime(DateTime.Today);
+        foreach (var grup in _grups)
+        {
+            var registres = await AssistenciaService.GetRegistresAsync(grup.Id, avui);
+            if (registres.Any())
+            {
+                _llistesPassades++;
+                _totalAbsents += registres
+                    .SelectMany(r => r.Assistencies)
+                    .Count(a => a.Estat == EstatAssistencia.Absent);
+            }
+        }
+
+        _carregant = false;
+    }
+
+    [Inject] NavigationManager Nav { get; set; } = null!;
+
+    private void NavigarPassarLlista(Guid grupId)
+    {
+        Nav.NavigateTo($"/passar-llista?grupId={grupId}");
+    }
+}

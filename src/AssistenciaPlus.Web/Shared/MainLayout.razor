@@ -1,17 +1,104 @@
 @inherits LayoutComponentBase
+@inject AuthService AuthService
+@inject NavigationManager Nav
 
-<MudThemeProvider />
+<MudThemeProvider Theme="@_theme" />
 <MudPopoverProvider />
-<MudDialogProvider />
+<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small" />
 <MudSnackbarProvider />
 
-<MudLayout>
-    <MudAppBar Elevation="1" Color="Color.Primary">
-        <MudText Typo="Typo.h6">AssistenciaPlus</MudText>
-    </MudAppBar>
-    <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+<AuthorizeView>
+    <Authorized>
+        <MudLayout>
+            <!-- AppBar -->
+            <MudAppBar Elevation="2" Color="Color.Primary" Dense="false">
+                <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                    Color="Color.Inherit"
+                    Edge="Edge.Start"
+                    OnClick="ToggleDrawer"
+                    Title="Obrir menú" />
+
+                <!-- Logo i nom escola -->
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="ml-1">
+                    <MudImage Src="https://agora.xtec.cat/escolamartamata-viladecans/wp-content/uploads/usu1599/2016/11/logomartamata.jpg"
+                        Height="40" Alt="Escola Marta Mata"
+                        Style="border-radius:4px;object-fit:contain;background:#fff;" />
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.subtitle1"
+                            Style="font-weight:700;line-height:1.1;color:white">
+                            AssistenciaPlus
+                        </MudText>
+                        <MudText Typo="Typo.caption"
+                            Style="line-height:1;opacity:0.85;color:white">
+                            Escola Marta Mata · Viladecans
+                        </MudText>
+                    </MudStack>
+                </MudStack>
+
+                <MudSpacer />
+
+                <!-- Usuari actual -->
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    <MudText Typo="Typo.body2"
+                        Style="color:white;opacity:0.9"
+                        Class="d-none d-sm-flex">
+                        @context.User.Identity?.Name
+                    </MudText>
+                    <MudMenu Icon="@Icons.Material.Filled.AccountCircle"
+                        Color="Color.Inherit"
+                        AnchorOrigin="Origin.BottomRight"
+                        TransformOrigin="Origin.TopRight">
+                        <MudMenuItem Icon="@Icons.Material.Filled.Person"
+                            OnClick="@(() => Nav.NavigateTo("/perfil"))">
+                            El meu perfil
+                        </MudMenuItem>
+                        <MudDivider />
+                        <MudMenuItem Icon="@Icons.Material.Filled.Logout"
+                            OnClick="LogoutAsync">
+                            Tancar sessió
+                        </MudMenuItem>
+                    </MudMenu>
+                </MudStack>
+            </MudAppBar>
+
+            <!-- Drawer lateral -->
+            <MudDrawer @bind-Open="_drawerOpen"
+                Elevation="1"
+                Variant="DrawerVariant.Responsive"
+                ClipMode="DrawerClipMode.Always"
+                Color="Color.Surface">
+                <MudDrawerHeader Class="pa-4">
+                    <MudText Typo="Typo.overline"
+                        Style="color:var(--mud-palette-text-secondary)">
+                        NAVEGACIÓ
+                    </MudText>
+                </MudDrawerHeader>
+                <NavMenu />
+            </MudDrawer>
+
+            <!-- Contingut principal -->
+            <MudMainContent>
+                <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4 pa-sm-6">
+                    @Body
+                </MudContainer>
+            </MudMainContent>
+        </MudLayout>
+    </Authorized>
+
+    <NotAuthorized>
             @Body
-        </MudContainer>
-    </MudMainContent>
-</MudLayout>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private readonly MudTheme _theme = AppTheme.Create();
+    private bool _drawerOpen = true;
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private async Task LogoutAsync()
+    {
+        await AuthService.LogoutAsync();
+        Nav.NavigateTo("/login", forceLoad: false);
+    }
+}

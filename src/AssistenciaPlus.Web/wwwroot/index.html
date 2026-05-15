@@ -2,22 +2,29 @@
 <html lang="ca">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AssistenciaPlus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#003F8A" />
+    <meta name="description" content="Sistema de gestió d'assistència — Escola Marta Mata de Viladecans" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="AssistenciaPlus" />
+    <title>AssistenciaPlus — Escola Marta Mata</title>
     <base href="/" />
-    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
 </head>
 <body>
     <div id="app">
-        <div style="display:flex;justify-content:center;align-items:center;height:100vh;">
+        <div id="blazor-loading">
+            <div class="spinner"></div>
             <p>Carregant AssistenciaPlus...</p>
         </div>
     </div>
 
     <div id="blazor-error-ui">
-        S'ha produït un error. <a href="" class="reload">Recarregar</a>
+        S'ha produït un error inesperat.
+        <a href="" class="reload">Recarregar la pàgina</a>
         <a class="dismiss">✖</a>
     </div>
 

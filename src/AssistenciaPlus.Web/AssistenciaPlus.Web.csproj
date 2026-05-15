@@ -22,6 +22,9 @@
     <!-- Blazor WASM runtime (explícit a .NET 10) -->
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.4" />
 
+    <!-- Auth -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.4" />
+
     <!-- HTTP client -->
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.4" />
 

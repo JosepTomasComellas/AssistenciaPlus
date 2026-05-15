@@ -1,0 +1,160 @@
+@page "/perfil"
+@attribute [Authorize]
+@inject AuthService AuthService
+@inject ISnackbar Snackbar
+
+<PageTitle>El meu perfil — AssistenciaPlus</PageTitle>
+
+<div class="mb-5">
+    <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">El meu perfil</MudText>
+</div>
+
+@if (_usuari == null)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else
+{
+    <MudGrid>
+        <MudItem xs="12" md="5">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius:12px">
+                <div class="d-flex flex-column align-center mb-5">
+                    <MudAvatar Color="Color.Primary" Size="Size.Large"
+                        Style="width:80px;height:80px;font-size:1.8rem;font-weight:700;margin-bottom:16px">
+                        @_usuari.NomComplet[..Math.Min(2, _usuari.NomComplet.Length)]
+                    </MudAvatar>
+                    <MudText Typo="Typo.h5" Style="font-weight:700">
+                        @_usuari.NomComplet
+                    </MudText>
+                    <MudChip T="string" Color="Color.Primary" Size="Size.Small" Class="mt-1">
+                        @GetRolText(_usuari.Rol)
+                    </MudChip>
+                </div>
+
+                <MudDivider Class="mb-4" />
+
+                <MudStack Spacing="3">
+                    <div>
+                        <MudText Typo="Typo.caption" Style="color:#A0AEC0;text-transform:uppercase;letter-spacing:0.05em">
+                            Correu electrònic
+                        </MudText>
+                        <MudText Style="font-weight:500">@_usuari.Email</MudText>
+                    </div>
+                    <div>
+                        <MudText Typo="Typo.caption" Style="color:#A0AEC0;text-transform:uppercase;letter-spacing:0.05em">
+                            Idioma preferit
+                        </MudText>
+                        <MudText Style="font-weight:500">
+                            @(_usuari.Idioma == "ca" ? "Català" : "Castellà")
+                        </MudText>
+                    </div>
+                    @if (_usuari.UltimAcces.HasValue)
+                    {
+                        <div>
+                            <MudText Typo="Typo.caption" Style="color:#A0AEC0;text-transform:uppercase;letter-spacing:0.05em">
+                                Últim accés
+                            </MudText>
+                            <MudText Style="font-weight:500">
+                                @_usuari.UltimAcces.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                            </MudText>
+                        </div>
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="7">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius:12px">
+                <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight:600">
+                    Canviar contrasenya
+                </MudText>
+
+                <MudStack Spacing="3">
+                    <MudTextField @bind-Value="_contrasenyaActual"
+                        Label="Contrasenya actual"
+                        InputType="InputType.Password"
+                        Variant="Variant.Outlined" />
+                    <MudTextField @bind-Value="_contrasenyaNova"
+                        Label="Nova contrasenya"
+                        InputType="InputType.Password"
+                        Variant="Variant.Outlined"
+                        HelperText="Mínim 8 caràcters" />
+                    <MudTextField @bind-Value="_contrasenyaConfirm"
+                        Label="Confirmar nova contrasenya"
+                        InputType="InputType.Password"
+                        Variant="Variant.Outlined" />
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                        OnClick="CanviarContrasenyaAsync"
+                        Disabled="_canviant"
+                        StartIcon="@Icons.Material.Filled.Lock">
+                        @if (_canviant)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Canviar contrasenya
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private UsuariModel? _usuari;
+    private string _contrasenyaActual = string.Empty;
+    private string _contrasenyaNova = string.Empty;
+    private string _contrasenyaConfirm = string.Empty;
+    private bool _canviant;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _usuari = await AuthService.GetCurrentUserAsync();
+    }
+
+    private async Task CanviarContrasenyaAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_contrasenyaActual) ||
+            string.IsNullOrWhiteSpace(_contrasenyaNova))
+        {
+            Snackbar.Add("Omple tots els camps", Severity.Warning);
+            return;
+        }
+
+        if (_contrasenyaNova != _contrasenyaConfirm)
+        {
+            Snackbar.Add("Les contrasenyes noves no coincideixen", Severity.Warning);
+            return;
+        }
+
+        if (_contrasenyaNova.Length < 8)
+        {
+            Snackbar.Add("La contrasenya ha de tenir mínim 8 caràcters", Severity.Warning);
+            return;
+        }
+
+        _canviant = true;
+        var ok = await AuthService.CanviarContrasenyaAsync(_contrasenyaActual, _contrasenyaNova);
+
+        if (ok)
+        {
+            Snackbar.Add("Contrasenya canviada correctament", Severity.Success);
+            _contrasenyaActual = string.Empty;
+            _contrasenyaNova = string.Empty;
+            _contrasenyaConfirm = string.Empty;
+        }
+        else
+        {
+            Snackbar.Add("La contrasenya actual és incorrecta", Severity.Error);
+        }
+
+        _canviant = false;
+    }
+
+    private static string GetRolText(string rol) => rol switch
+    {
+        "EquipDirectiu" => "Equip Directiu",
+        "Administratiu" => "Administratiu/va",
+        _ => "Mestre/a"
+    };
+}

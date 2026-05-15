@@ -1,0 +1,292 @@
+@page "/configuracio/alumnes"
+@attribute [Authorize(Roles = "EquipDirectiu")]
+@inject GrupService GrupService
+@inject AlumnesService AlumnesService
+@inject ISnackbar Snackbar
+
+<PageTitle>Alumnes i grups — Configuració</PageTitle>
+
+<div class="mb-5">
+    <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">Alumnes i grups</MudText>
+    <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
+        Gestió dels alumnes del centre
+    </MudText>
+</div>
+
+<!-- Selecció de grup -->
+<MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-radius:12px">
+    <MudGrid AlignItems="AlignItems.Center">
+        <MudItem xs="12" sm="6" md="4">
+            <MudSelect T="Guid?"
+                Value="_grupSeleccionat"
+                ValueChanged="GrupCanviatAsync"
+                Label="Selecciona el grup"
+                Variant="Variant.Outlined">
+                <MudSelectItem Value="@((Guid?)null)">— Selecciona un grup —</MudSelectItem>
+                @foreach (var grup in _grups)
+                {
+                    <MudSelectItem Value="@((Guid?)grup.Id)">
+                        @grup.NomComplet (@grup.CursCodi)
+                    </MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        @if (_grupSeleccionat.HasValue)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                    StartIcon="@Icons.Material.Filled.PersonAdd"
+                    OnClick="ObrirCrearAlumne">
+                    Afegir alumne
+                </MudButton>
+            </MudItem>
+        }
+    </MudGrid>
+</MudPaper>
+
+@if (_grupSeleccionat.HasValue)
+{
+    @if (_carregantAlumnes)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudPaper Elevation="1" Style="border-radius:12px;overflow:hidden">
+            <MudTable Items="_alumnes.OrderBy(a => a.Cognom1)" Hover="true" Dense="false">
+                <HeaderContent>
+                    <MudTh Style="width:50px">#</MudTh>
+                    <MudTh>Alumne/a</MudTh>
+                    <MudTh>Data de naixement</MudTh>
+                    <MudTh>Correu família</MudTh>
+                    <MudTh Style="text-align:center">Actiu</MudTh>
+                    <MudTh Style="text-align:center">Accions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudText Typo="Typo.caption" Style="color:#A0AEC0">
+                            @context.OrdreFusteta
+                        </MudText>
+                    </MudTd>
+                    <MudTd>
+                        <div class="d-flex align-center gap-2">
+                            <MudAvatar Color="Color.Primary" Size="Size.Small"
+                                Style="font-size:0.75rem;font-weight:700">
+                                @context.Inicials
+                            </MudAvatar>
+                            <div>
+                                <MudText Style="font-weight:500">@context.NomComplet</MudText>
+                                @if (!string.IsNullOrEmpty(context.NomFusteta) &&
+                                     context.NomFusteta != context.Nom)
+                                {
+                                    <MudText Typo="Typo.caption" Style="color:#718096">
+                                        Fusteta: @context.NomFusteta
+                                    </MudText>
+                                }
+                            </div>
+                        </div>
+                    </MudTd>
+                    <MudTd>
+                        @(context.DataNaixement?.ToString("dd/MM/yyyy") ?? "—")
+                    </MudTd>
+                    <MudTd>@(context.EmailFamilia ?? "—")</MudTd>
+                    <MudTd Style="text-align:center">
+                        <MudIcon
+                            Icon="@(context.EsActiu ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                            Color="@(context.EsActiu ? Color.Success : Color.Default)"
+                            Size="Size.Small" />
+                    </MudTd>
+                    <MudTd Style="text-align:center">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                            Size="Size.Small" Color="Color.Primary"
+                            OnClick="() => ObrirEditarAlumne(context)" />
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText Class="pa-4" Style="color:#A0AEC0">
+                        Cap alumne en aquest grup
+                    </MudText>
+                </NoRecordsContent>
+            </MudTable>
+        </MudPaper>
+    }
+}
+
+<!-- Dialog crear/editar alumne -->
+<MudDialog @bind-Visible="_dialogObert" Options="@_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            @(_editantAlumne == null ? "Nou alumne" : "Editar alumne")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudGrid>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_formNom" Label="Nom"
+                        Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_formCognom1" Label="Primer cognom"
+                        Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_formCognom2" Label="Segon cognom"
+                        Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_formEmailFamilia" Label="Correu família"
+                        Variant="Variant.Outlined" InputType="InputType.Email" />
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudNumericField T="int" @bind-Value="_formOrdreFusteta"
+                        Label="Ordre Fusteta"
+                        Variant="Variant.Outlined" Min="0" Max="99" />
+                </MudItem>
+                @if (_editantAlumne != null)
+                {
+                    <MudItem xs="12" sm="3">
+                        <MudSwitch @bind-Value="_formEsActiu"
+                            Color="Color.Primary"
+                            Label="@(_formEsActiu ? "Actiu" : "Inactiu")" />
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _dialogObert = false" Variant="Variant.Text">
+            Cancel·lar
+        </MudButton>
+        <MudButton OnClick="DesarAlumneAsync"
+            Variant="Variant.Filled" Color="Color.Primary"
+            Disabled="_desant">
+            @(_editantAlumne == null ? "Afegir alumne" : "Desar canvis")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<GrupModel> _grups = [];
+    private List<AlumneModel> _alumnes = [];
+    private Guid? _grupSeleccionat;
+    private bool _carregantAlumnes;
+    private bool _dialogObert;
+    private bool _desant;
+    private AlumneModel? _editantAlumne;
+
+    private string _formNom = string.Empty;
+    private string _formCognom1 = string.Empty;
+    private string? _formCognom2;
+    private string? _formEmailFamilia;
+    private int _formOrdreFusteta;
+    private bool _formEsActiu = true;
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseButton = true
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _grups = await GrupService.GetGrupsAsync();
+    }
+
+    private async Task GrupCanviatAsync(Guid? grupId)
+    {
+        _grupSeleccionat = grupId;
+        if (!grupId.HasValue) return;
+
+        _carregantAlumnes = true;
+        _alumnes = await AlumnesService.GetAlumnesPerGrupAsync(grupId.Value);
+        _carregantAlumnes = false;
+    }
+
+    private void ObrirCrearAlumne()
+    {
+        _editantAlumne = null;
+        _formNom = string.Empty;
+        _formCognom1 = string.Empty;
+        _formCognom2 = null;
+        _formEmailFamilia = null;
+        _formOrdreFusteta = _alumnes.Count + 1;
+        _formEsActiu = true;
+        _dialogObert = true;
+    }
+
+    private void ObrirEditarAlumne(AlumneModel a)
+    {
+        _editantAlumne = a;
+        _formNom = a.Nom;
+        _formCognom1 = a.Cognom1;
+        _formCognom2 = a.Cognom2;
+        _formEmailFamilia = a.EmailFamilia;
+        _formOrdreFusteta = a.OrdreFusteta;
+        _formEsActiu = a.EsActiu;
+        _dialogObert = true;
+    }
+
+    private async Task DesarAlumneAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_formNom) || string.IsNullOrWhiteSpace(_formCognom1))
+        {
+            Snackbar.Add("El nom i el primer cognom són obligatoris", Severity.Warning);
+            return;
+        }
+
+        _desant = true;
+
+        if (_editantAlumne == null)
+        {
+            var (ok, error) = await AlumnesService.CrearAlumneAsync(new CrearAlumneModel
+            {
+                Nom = _formNom,
+                Cognom1 = _formCognom1,
+                Cognom2 = _formCognom2,
+                EmailFamilia = _formEmailFamilia,
+                GrupId = _grupSeleccionat!.Value,
+                OrdreFusteta = _formOrdreFusteta
+            });
+
+            if (ok)
+            {
+                Snackbar.Add("Alumne afegit correctament", Severity.Success);
+                _dialogObert = false;
+                await GrupCanviatAsync(_grupSeleccionat);
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error al crear l'alumne", Severity.Error);
+            }
+        }
+        else
+        {
+            var (ok, error) = await AlumnesService.ActualitzarAlumneAsync(
+                _editantAlumne.Id,
+                new ActualitzarAlumneModel
+                {
+                    Nom = _formNom,
+                    Cognom1 = _formCognom1,
+                    Cognom2 = _formCognom2,
+                    EmailFamilia = _formEmailFamilia,
+                    OrdreFusteta = _formOrdreFusteta,
+                    EsActiu = _formEsActiu
+                });
+
+            if (ok)
+            {
+                Snackbar.Add("Alumne actualitzat correctament", Severity.Success);
+                _dialogObert = false;
+                await GrupCanviatAsync(_grupSeleccionat);
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error al actualitzar l'alumne", Severity.Error);
+            }
+        }
+
+        _desant = false;
+    }
+}

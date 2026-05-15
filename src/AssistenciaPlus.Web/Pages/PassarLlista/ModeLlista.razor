@@ -1,0 +1,172 @@
+@* Mode Llista Clàssica: llista vertical amb estat per alumne *@
+
+<MudPaper Elevation="1" Style="border-radius:12px;overflow:hidden">
+    <MudList T="string" Padding="false">
+        @for (int i = 0; i < Alumnes.Count; i++)
+        {
+            var alumne = Alumnes[i];
+            var input = Inputs.FirstOrDefault(x => x.AlumneId == alumne.Id);
+            if (input == null) continue;
+            var index = i;
+
+            <MudListItem T="string" Class="@($"alumne-row{(input.Estat != EstatAssistencia.Present ? " absent-row" : "")}")">
+                <div class="d-flex align-center gap-3 w-100">
+
+                    <!-- Número i avatar -->
+                    <div class="fila-num" style="color:#A0AEC0;font-size:0.8rem;min-width:24px;text-align:right">
+                        @(index + 1)
+                    </div>
+
+                    <MudAvatar Color="@GetAvatarColor(input.Estat)"
+                        Size="Size.Medium"
+                        Style="font-weight:700;font-size:0.9rem;flex-shrink:0">
+                        @alumne.Inicials
+                    </MudAvatar>
+
+                    <!-- Nom -->
+                    <div class="flex-grow-1 min-width-0">
+                        <MudText Typo="Typo.body1"
+                            Style="@($"font-weight:600;{(input.Estat == EstatAssistencia.Absent ? "text-decoration:line-through;color:#C62828" : "")}")">
+                            @alumne.NomComplet
+                        </MudText>
+                        @if (input.Estat != EstatAssistencia.Present && input.Motiu.HasValue)
+                        {
+                            <MudText Typo="Typo.caption" Style="color:#718096">
+                                @GetMotiuText(input.Motiu.Value)
+                            </MudText>
+                        }
+                    </div>
+
+                    <!-- Botons d'estat -->
+                    <div class="d-flex gap-1 flex-shrink-0">
+                        <MudTooltip Text="Present">
+                            <MudIconButton
+                                Icon="@Icons.Material.Filled.CheckCircle"
+                                Color="@(input.Estat == EstatAssistencia.Present ? Color.Success : Color.Default)"
+                                Size="Size.Medium"
+                                OnClick="() => { input.Estat = EstatAssistencia.Present; input.Motiu = null; }"
+                                Class="@(input.Estat == EstatAssistencia.Present ? "estat-actiu" : "")" />
+                        </MudTooltip>
+                        <MudTooltip Text="Absent">
+                            <MudIconButton
+                                Icon="@Icons.Material.Filled.Cancel"
+                                Color="@(input.Estat == EstatAssistencia.Absent ? Color.Error : Color.Default)"
+                                Size="Size.Medium"
+                                OnClick="() => ObrirDetallAbsencia(input, alumne)"
+                                Class="@(input.Estat == EstatAssistencia.Absent ? "estat-actiu" : "")" />
+                        </MudTooltip>
+                        <MudTooltip Text="Tard">
+                            <MudIconButton
+                                Icon="@Icons.Material.Filled.AccessTime"
+                                Color="@(input.Estat == EstatAssistencia.Tard ? Color.Warning : Color.Default)"
+                                Size="Size.Medium"
+                                OnClick="() => { input.Estat = EstatAssistencia.Tard; }" />
+                        </MudTooltip>
+                    </div>
+                </div>
+            </MudListItem>
+
+            @if (index < Alumnes.Count - 1)
+            {
+                <MudDivider />
+            }
+        }
+    </MudList>
+</MudPaper>
+
+<!-- Dialog per a detall d'absència -->
+<MudDialog @bind-Visible="_dialogObert" Options="@_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            Detall absència — @_alumneDialog?.NomComplet
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_inputDialog != null)
+        {
+            <MudStack Spacing="3">
+                <MudSelect T="MotiuAbsencia?"
+                    @bind-Value="_inputDialog.Motiu"
+                    Label="Motiu de l'absència"
+                    Variant="Variant.Outlined">
+                    <MudSelectItem Value="@((MotiuAbsencia?)null)">Sense especificar</MudSelectItem>
+                    <MudSelectItem Value="@((MotiuAbsencia?)MotiuAbsencia.SenseMotiu)">Sense motiu conegut</MudSelectItem>
+                    <MudSelectItem Value="@((MotiuAbsencia?)MotiuAbsencia.Metge)">Visita mèdica</MudSelectItem>
+                    <MudSelectItem Value="@((MotiuAbsencia?)MotiuAbsencia.NoEsTrobaBe)">No es troba bé</MudSelectItem>
+                    <MudSelectItem Value="@((MotiuAbsencia?)MotiuAbsencia.FamiliaVeBuscar)">La família ve a buscar-lo/a</MudSelectItem>
+                    <MudSelectItem Value="@((MotiuAbsencia?)MotiuAbsencia.ServeiExtern)">Servei extern / activitat</MudSelectItem>
+                </MudSelect>
+
+                <MudTextField @bind-Value="_inputDialog.Observacio"
+                    Label="Observació (opcional)"
+                    Variant="Variant.Outlined"
+                    Lines="2"
+                    Placeholder="Afegeix qualsevol nota rellevant..." />
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _dialogObert = false" Variant="Variant.Text">
+            Tancar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .alumne-row {
+        padding: 10px 16px !important;
+        transition: background 0.1s ease;
+    }
+    .alumne-row:hover {
+        background: #F7FAFC !important;
+    }
+    .absent-row {
+        background: #FFF8F8 !important;
+    }
+    .estat-actiu {
+        background: rgba(0,0,0,0.06) !important;
+        border-radius: 50% !important;
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public List<AlumneModel> Alumnes { get; set; } = [];
+    [Parameter, EditorRequired] public List<AssistenciaAlumneInputModel> Inputs { get; set; } = [];
+
+    private bool _dialogObert;
+    private AlumneModel? _alumneDialog;
+    private AssistenciaAlumneInputModel? _inputDialog;
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.ExtraSmall,
+        FullWidth = true,
+        CloseButton = true
+    };
+
+    private void ObrirDetallAbsencia(AssistenciaAlumneInputModel input, AlumneModel alumne)
+    {
+        input.Estat = EstatAssistencia.Absent;
+        _inputDialog = input;
+        _alumneDialog = alumne;
+        _dialogObert = true;
+    }
+
+    private static Color GetAvatarColor(EstatAssistencia estat) => estat switch
+    {
+        EstatAssistencia.Absent => Color.Error,
+        EstatAssistencia.Tard => Color.Warning,
+        EstatAssistencia.AbsenciaParcial => Color.Warning,
+        _ => Color.Primary
+    };
+
+    private static string GetMotiuText(MotiuAbsencia motiu) => motiu switch
+    {
+        MotiuAbsencia.Metge => "Visita mèdica",
+        MotiuAbsencia.NoEsTrobaBe => "No es troba bé",
+        MotiuAbsencia.FamiliaVeBuscar => "La família ve a buscar-lo/a",
+        MotiuAbsencia.ServeiExtern => "Servei extern / activitat",
+        MotiuAbsencia.Tard => "Retard",
+        _ => "Sense motiu especificat"
+    };
+}

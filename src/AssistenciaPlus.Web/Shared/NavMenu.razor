@@ -1,0 +1,47 @@
+@inject NavigationManager Nav
+
+<MudNavMenu>
+    <!-- Inici / Dashboard -->
+    <MudNavLink Href="/"
+        Icon="@Icons.Material.Filled.Dashboard"
+        Match="NavLinkMatch.All">
+        Inici
+    </MudNavLink>
+
+    <!-- Passar llista -->
+    <MudNavLink Href="/passar-llista"
+        Icon="@Icons.Material.Filled.Checklist">
+        Passar llista
+    </MudNavLink>
+
+    <MudDivider Class="my-2" />
+
+    <!-- Informes (EquipDirectiu i Administratiu) -->
+    <AuthorizeView Policy="NomesEquipDirectiuIAdministratiu">
+        <MudNavLink Href="/informes"
+            Icon="@Icons.Material.Filled.BarChart">
+            Informes
+        </MudNavLink>
+    </AuthorizeView>
+
+    <!-- Configuració (EquipDirectiu) -->
+    <AuthorizeView Roles="EquipDirectiu">
+        <MudDivider Class="my-2" />
+        <MudNavGroup Title="Configuració"
+            Icon="@Icons.Material.Filled.Settings"
+            Expanded="false">
+            <MudNavLink Href="/configuracio/usuaris"
+                Icon="@Icons.Material.Filled.People">
+                Usuaris
+            </MudNavLink>
+            <MudNavLink Href="/configuracio/alumnes"
+                Icon="@Icons.Material.Filled.School">
+                Alumnes i grups
+            </MudNavLink>
+            <MudNavLink Href="/configuracio/any-academic"
+                Icon="@Icons.Material.Filled.CalendarMonth">
+                Any acadèmic
+            </MudNavLink>
+        </MudNavGroup>
+    </AuthorizeView>
+</MudNavMenu>

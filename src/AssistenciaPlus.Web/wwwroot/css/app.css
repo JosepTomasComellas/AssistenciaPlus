@@ -1,24 +1,187 @@
+/* ── Reset i base ───────────────────────────────────────── */
 html, body {
     font-family: 'Roboto', sans-serif;
     margin: 0;
     padding: 0;
+    background-color: #F4F6FA;
+    -webkit-text-size-adjust: 100%;
 }
 
+/* ── Scrollbar personalitzada ──────────────────────────── */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #F4F6FA;
+}
+::-webkit-scrollbar-thumb {
+    background: #CBD5E0;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #A0AEC0;
+}
+
+/* ── Focus visible per accessibilitat ──────────────────── */
+*:focus-visible {
+    outline: 3px solid #003F8A;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* ── MudBlazor overrides ────────────────────────────────── */
+
+/* AppBar sombra i gradient lleu */
+.mud-appbar {
+    background: linear-gradient(90deg, #002B6A 0%, #003F8A 100%) !important;
+}
+
+/* Drawer amb scroll suau */
+.mud-drawer-content {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* NavLinks: mida mínima de toc per tauletes */
+.mud-nav-link {
+    min-height: 48px !important;
+    font-size: 0.95rem !important;
+    border-radius: 8px !important;
+    margin: 2px 8px !important;
+    padding: 0 12px !important;
+}
+
+.mud-nav-link:hover {
+    background: rgba(0, 63, 138, 0.08) !important;
+}
+
+.mud-nav-link.active {
+    background: rgba(0, 63, 138, 0.12) !important;
+    color: #003F8A !important;
+    font-weight: 600 !important;
+}
+
+/* Cards amb ombra subtil */
+.mud-card {
+    border-radius: 12px !important;
+}
+
+/* Botons: mida mínima per a dits */
+.mud-button-root {
+    min-height: 42px;
+}
+
+/* Inputs: font gran per facilitat de lectura */
+.mud-input-root {
+    font-size: 1rem !important;
+}
+
+/* Table: files més altes per a tauletes */
+.mud-table-row td {
+    padding: 12px 16px !important;
+}
+
+/* Chip */
+.mud-chip-root {
+    font-weight: 500 !important;
+}
+
+/* ── Loading screen ─────────────────────────────────────── */
+#blazor-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: linear-gradient(135deg, #002B6A 0%, #003F8A 100%);
+    color: white;
+    gap: 20px;
+}
+
+#blazor-loading .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+#blazor-loading p {
+    font-size: 1rem;
+    opacity: 0.9;
+    margin: 0;
+    font-family: 'Roboto', sans-serif;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Error UI ───────────────────────────────────────────── */
 #blazor-error-ui {
-    background: lightyellow;
+    background: #FFF3CD;
     bottom: 0;
-    box-shadow: 0 -1px 2px rgba(0,0,0,0.2);
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.15);
     display: none;
     left: 0;
-    padding: 0.6rem 1.25rem 0.7rem;
+    padding: 12px 20px 14px;
     position: fixed;
     width: 100%;
-    z-index: 1000;
+    z-index: 9999;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9rem;
 }
 
 #blazor-error-ui .dismiss {
     cursor: pointer;
     position: absolute;
-    right: 0.75rem;
-    top: 0.5rem;
+    right: 12px;
+    top: 8px;
+    font-size: 1.2rem;
+    opacity: 0.7;
+}
+
+/* ── Utilitats ──────────────────────────────────────────── */
+.cursor-pointer { cursor: pointer; }
+.rounded-lg { border-radius: 12px !important; }
+.rounded-xl { border-radius: 16px !important; }
+
+/* Gradient text */
+.text-gradient {
+    background: linear-gradient(90deg, #003F8A, #1A5FAD);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ── Mobile first adjustments ───────────────────────────── */
+@media (max-width: 600px) {
+    .mud-main-content {
+        padding: 8px !important;
+    }
+
+    .mud-container {
+        padding: 8px 12px !important;
+    }
+
+    /* Botons més grans en mòbil */
+    .mud-button-root {
+        min-height: 48px;
+    }
+}
+
+/* ── Print ──────────────────────────────────────────────── */
+@media print {
+    .mud-appbar,
+    .mud-drawer,
+    .mud-snackbar-location-top,
+    .mud-snackbar-location-bottom {
+        display: none !important;
+    }
+
+    .mud-main-content {
+        padding: 0 !important;
+    }
 }

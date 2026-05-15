@@ -1,0 +1,323 @@
+@page "/configuracio/usuaris"
+@attribute [Authorize(Roles = "EquipDirectiu")]
+@inject ConfiguracioService ConfiguracioService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Usuaris — Configuració</PageTitle>
+
+<div class="mb-5">
+    <div class="d-flex align-center justify-space-between flex-wrap gap-3">
+        <div>
+            <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">Usuaris</MudText>
+            <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
+                Gestió del personal del centre
+            </MudText>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+            StartIcon="@Icons.Material.Filled.PersonAdd"
+            OnClick="ObrirCrearUsuari">
+            Nou usuari
+        </MudButton>
+    </div>
+</div>
+
+@if (_carregant)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else
+{
+    <MudPaper Elevation="1" Style="border-radius:12px;overflow:hidden">
+        <MudTable Items="_usuaris" Hover="true" Dense="false"
+            Filter="FiltrarUsuari" @bind-SelectedItem="_usuariSeleccionat">
+            <ToolBarContent>
+                <MudTextField @bind-Value="_cerca"
+                    Placeholder="Cercar per nom o correu..."
+                    Adornment="Adornment.Start"
+                    AdornmentIcon="@Icons.Material.Filled.Search"
+                    IconSize="Size.Medium"
+                    Immediate="true"
+                    Class="mt-0" />
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh>Nom</MudTh>
+                <MudTh>Correu</MudTh>
+                <MudTh Style="text-align:center">Rol</MudTh>
+                <MudTh Style="text-align:center">Idioma</MudTh>
+                <MudTh Style="text-align:center">Actiu</MudTh>
+                <MudTh Style="text-align:center">Accions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <div class="d-flex align-center gap-2">
+                        <MudAvatar Color="Color.Primary" Size="Size.Small"
+                            Style="font-size:0.75rem;font-weight:700">
+                            @context.NomComplet[..Math.Min(2, context.NomComplet.Length)]
+                        </MudAvatar>
+                        <MudText Style="font-weight:500">@context.NomComplet</MudText>
+                    </div>
+                </MudTd>
+                <MudTd>@context.Email</MudTd>
+                <MudTd Style="text-align:center">
+                    <MudChip T="string" Size="Size.Small"
+                        Color="@GetRolColor(context.Rol)">
+                        @GetRolText(context.Rol)
+                    </MudChip>
+                </MudTd>
+                <MudTd Style="text-align:center">
+                    <MudText>@(context.Idioma == "ca" ? "Català" : "Castellà")</MudText>
+                </MudTd>
+                <MudTd Style="text-align:center">
+                    <MudIcon Icon="@(context.EsActiu ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                        Color="@(context.EsActiu ? Color.Success : Color.Default)"
+                        Size="Size.Small" />
+                </MudTd>
+                <MudTd Style="text-align:center">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                        Size="Size.Small" Color="Color.Primary"
+                        Title="Editar"
+                        OnClick="() => ObrirEditarUsuari(context)" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Email"
+                        Size="Size.Small" Color="Color.Secondary"
+                        Title="Enviar credencials"
+                        OnClick="() => EnviarCredencials(context)" />
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText Class="pa-4" Style="color:#A0AEC0">
+                    Cap usuari trobat
+                </MudText>
+            </NoRecordsContent>
+        </MudTable>
+    </MudPaper>
+}
+
+<!-- Dialog de crear/editar usuari -->
+<MudDialog @bind-Visible="_dialogObert" Options="@_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            @(_editantUsuari == null ? "Nou usuari" : "Editar usuari")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_formNom"
+                        Label="Nom" Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_formCognom1"
+                        Label="Primer cognom" Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_formCognom2"
+                        Label="Segon cognom (opcional)" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_formEmail"
+                        Label="Correu electrònic" Variant="Variant.Outlined"
+                        InputType="InputType.Email" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="_formRol"
+                        Label="Rol" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("Mestre")">Mestre/a</MudSelectItem>
+                        <MudSelectItem Value="@("EquipDirectiu")">Equip Directiu</MudSelectItem>
+                        <MudSelectItem Value="@("Administratiu")">Administratiu/va</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="_formIdioma"
+                        Label="Idioma" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("ca")">Català</MudSelectItem>
+                        <MudSelectItem Value="@("es")">Castellà</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                @if (_editantUsuari != null)
+                {
+                    <MudItem xs="12">
+                        <MudSwitch @bind-Value="_formEsActiu"
+                            Color="Color.Primary"
+                            Label="@(_formEsActiu ? "Actiu" : "Inactiu")" />
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _dialogObert = false" Variant="Variant.Text">
+            Cancel·lar
+        </MudButton>
+        <MudButton OnClick="DesarUsuariAsync"
+            Variant="Variant.Filled" Color="Color.Primary"
+            Disabled="_desant">
+            @if (_desant)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            @(_editantUsuari == null ? "Crear usuari" : "Desar canvis")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<UsuariModel> _usuaris = [];
+    private bool _carregant = true;
+    private bool _dialogObert;
+    private bool _desant;
+    private string _cerca = string.Empty;
+    private UsuariModel? _usuariSeleccionat;
+    private UsuariModel? _editantUsuari;
+
+    // Camps del formulari
+    private string _formNom = string.Empty;
+    private string _formCognom1 = string.Empty;
+    private string? _formCognom2;
+    private string _formEmail = string.Empty;
+    private string _formRol = "Mestre";
+    private string _formIdioma = "ca";
+    private bool _formEsActiu = true;
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseButton = true
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarUsuarisAsync();
+    }
+
+    private async Task CarregarUsuarisAsync()
+    {
+        _carregant = true;
+        _usuaris = await ConfiguracioService.GetUsuarisAsync();
+        _carregant = false;
+    }
+
+    private bool FiltrarUsuari(UsuariModel u)
+    {
+        if (string.IsNullOrWhiteSpace(_cerca)) return true;
+        var cerca = _cerca.Trim().ToLower();
+        return u.NomComplet.ToLower().Contains(cerca) ||
+               u.Email.ToLower().Contains(cerca);
+    }
+
+    private void ObrirCrearUsuari()
+    {
+        _editantUsuari = null;
+        _formNom = string.Empty;
+        _formCognom1 = string.Empty;
+        _formCognom2 = null;
+        _formEmail = string.Empty;
+        _formRol = "Mestre";
+        _formIdioma = "ca";
+        _formEsActiu = true;
+        _dialogObert = true;
+    }
+
+    private void ObrirEditarUsuari(UsuariModel u)
+    {
+        _editantUsuari = u;
+        _formNom = u.Nom;
+        _formCognom1 = u.Cognom1;
+        _formCognom2 = u.Cognom2;
+        _formEmail = u.Email;
+        _formRol = u.Rol;
+        _formIdioma = u.Idioma;
+        _formEsActiu = u.EsActiu;
+        _dialogObert = true;
+    }
+
+    private async Task DesarUsuariAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_formNom) ||
+            string.IsNullOrWhiteSpace(_formCognom1) ||
+            string.IsNullOrWhiteSpace(_formEmail))
+        {
+            Snackbar.Add("Omple tots els camps obligatoris", Severity.Warning);
+            return;
+        }
+
+        _desant = true;
+
+        if (_editantUsuari == null)
+        {
+            var (ok, error) = await ConfiguracioService.CrearUsuariAsync(new CrearUsuariModel
+            {
+                Nom = _formNom,
+                Cognom1 = _formCognom1,
+                Cognom2 = _formCognom2,
+                Email = _formEmail,
+                Rol = _formRol,
+                Idioma = _formIdioma
+            });
+
+            if (ok)
+            {
+                Snackbar.Add("Usuari creat. S'han enviat les credencials per correu.", Severity.Success);
+                _dialogObert = false;
+                await CarregarUsuarisAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error al crear l'usuari", Severity.Error);
+            }
+        }
+        else
+        {
+            var (ok, error) = await ConfiguracioService.ActualitzarUsuariAsync(
+                _editantUsuari.Id,
+                new ActualitzarUsuariModel
+                {
+                    Nom = _formNom,
+                    Cognom1 = _formCognom1,
+                    Cognom2 = _formCognom2,
+                    Email = _formEmail,
+                    Rol = _formRol,
+                    Idioma = _formIdioma,
+                    EsActiu = _formEsActiu
+                });
+
+            if (ok)
+            {
+                Snackbar.Add("Usuari actualitzat correctament", Severity.Success);
+                _dialogObert = false;
+                await CarregarUsuarisAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error al actualitzar l'usuari", Severity.Error);
+            }
+        }
+
+        _desant = false;
+    }
+
+    private async Task EnviarCredencials(UsuariModel u)
+    {
+        var (ok, error) = await ConfiguracioService.EnviarCredencialsAsync(u.Id);
+        if (ok)
+            Snackbar.Add($"Credencials enviades a {u.Email}", Severity.Success);
+        else
+            Snackbar.Add(error ?? "Error al enviar les credencials", Severity.Error);
+    }
+
+    private static Color GetRolColor(string rol) => rol switch
+    {
+        "EquipDirectiu" => Color.Primary,
+        "Administratiu" => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private static string GetRolText(string rol) => rol switch
+    {
+        "EquipDirectiu" => "Equip Directiu",
+        "Administratiu" => "Administratiu/va",
+        _ => "Mestre/a"
+    };
+}

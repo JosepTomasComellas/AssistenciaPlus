@@ -1,12 +1,61 @@
-<Router AppAssembly="@typeof(App).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-    <NotFound>
-        <PageTitle>No trobat</PageTitle>
-        <LayoutView Layout="@typeof(MainLayout)">
-            <MudText Typo="Typo.h5">Pàgina no trobada.</MudText>
-        </LayoutView>
-    </NotFound>
-</Router>
+@inject AuthService AuthService
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    @if (context.User.Identity?.IsAuthenticated != true)
+                    {
+                        <RedirectToLogin />
+                    }
+                    else
+                    {
+                        <MudContainer MaxWidth="MaxWidth.Small"
+                            Class="d-flex flex-column align-center justify-center"
+                            Style="height:100vh">
+                            <MudIcon Icon="@Icons.Material.Filled.Block"
+                                Size="Size.Large" Color="Color.Error" Class="mb-4" />
+                            <MudText Typo="Typo.h5" Align="Align.Center">
+                                No teniu permís per accedir a aquesta pàgina
+                            </MudText>
+                            <MudButton Href="/" Variant="Variant.Text"
+                                Color="Color.Primary" Class="mt-4">
+                                Tornar a l'inici
+                            </MudButton>
+                        </MudContainer>
+                    }
+                </NotAuthorized>
+                <Authorizing>
+                    <MudContainer Class="d-flex align-center justify-center"
+                        Style="height:100vh">
+                        <MudProgressCircular Color="Color.Primary"
+                            Indeterminate="true" Size="Size.Large" />
+                    </MudContainer>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Pàgina no trobada — AssistenciaPlus</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <MudContainer MaxWidth="MaxWidth.Small"
+                    Class="d-flex flex-column align-center justify-center mt-16">
+                    <MudText Typo="Typo.h1" Class="mb-2"
+                        Style="font-size:5rem;opacity:0.15;font-weight:700">404</MudText>
+                    <MudText Typo="Typo.h5" Class="mb-4">Pàgina no trobada</MudText>
+                    <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary">
+                        Tornar a l'inici
+                    </MudButton>
+                </MudContainer>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthService.InitializeAsync();
+    }
+}

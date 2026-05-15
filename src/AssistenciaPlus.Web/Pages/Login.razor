@@ -1,0 +1,160 @@
+@page "/login"
+@layout EmptyLayout
+@inject AuthService AuthService
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Iniciar sessió — AssistenciaPlus</PageTitle>
+
+<MudThemeProvider Theme="@_theme" />
+<MudSnackbarProvider />
+<MudDialogProvider />
+<MudPopoverProvider />
+
+<div class="login-bg">
+    <MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="d-flex flex-column align-center justify-center"
+        Style="min-height:100vh">
+
+        <!-- Logo i nom escola -->
+        <MudPaper Class="login-card pa-8 pa-sm-10" Elevation="8">
+
+            <div class="d-flex flex-column align-center mb-6">
+                <MudImage
+                    Src="https://agora.xtec.cat/escolamartamata-viladecans/wp-content/uploads/usu1599/2016/11/logomartamata.jpg"
+                    Height="80"
+                    Alt="Escola Marta Mata"
+                    Class="mb-4"
+                    Style="border-radius:8px;object-fit:contain;" />
+                <MudText Typo="Typo.h5" Align="Align.Center"
+                    Style="font-weight:700;color:#003F8A">
+                    AssistenciaPlus
+                </MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center"
+                    Style="color:#4A5568">
+                    Escola Marta Mata · Viladecans
+                </MudText>
+            </div>
+
+            <MudText Typo="Typo.h6" Class="mb-6" Align="Align.Center"
+                Style="color:#1A2744">
+                Benvingut/da
+            </MudText>
+
+            <EditForm Model="_form" OnValidSubmit="LoginAsync">
+                <DataAnnotationsValidator />
+
+                <MudTextField
+                    @bind-Value="_form.Email"
+                    Label="Correu electrònic"
+                    InputType="InputType.Email"
+                    Variant="Variant.Outlined"
+                    Adornment="Adornment.Start"
+                    AdornmentIcon="@Icons.Material.Filled.Email"
+                    AdornmentColor="Color.Primary"
+                    Class="mb-4"
+                    Disabled="_loading"
+                    AutoFocus="true"
+                    autocomplete="email" />
+
+                <MudTextField
+                    @bind-Value="_form.Contrasenya"
+                    Label="Contrasenya"
+                    InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                    Variant="Variant.Outlined"
+                    Adornment="Adornment.End"
+                    AdornmentIcon="@(_showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                    OnAdornmentClick="() => _showPassword = !_showPassword"
+                    AdornmentColor="Color.Default"
+                    Class="mb-6"
+                    Disabled="_loading"
+                    autocomplete="current-password" />
+
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">
+                        @_errorMessage
+                    </MudAlert>
+                }
+
+                <MudButton
+                    ButtonType="ButtonType.Submit"
+                    Variant="Variant.Filled"
+                    Color="Color.Primary"
+                    Size="Size.Large"
+                    FullWidth="true"
+                    Disabled="_loading"
+                    Style="font-size:1rem;padding:14px">
+                    @if (_loading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Iniciant sessió...</span>
+                    }
+                    else
+                    {
+                        <span>Iniciar sessió</span>
+                    }
+                </MudButton>
+            </EditForm>
+
+        </MudPaper>
+
+        <MudText Typo="Typo.caption" Class="mt-4" Style="color:rgba(255,255,255,0.7);text-align:center">
+            © @DateTime.Now.Year Escola Marta Mata · Viladecans
+        </MudText>
+    </MudContainer>
+</div>
+
+<style>
+    .login-bg {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #003F8A 0%, #1A5FAD 50%, #003F8A 100%);
+        background-attachment: fixed;
+    }
+    .login-card {
+        width: 100%;
+        border-radius: 16px !important;
+    }
+</style>
+
+@code {
+    private readonly MudTheme _theme = AppTheme.Create();
+
+    private LoginForm _form = new();
+    private bool _loading;
+    private bool _showPassword;
+    private string? _errorMessage;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+            Nav.NavigateTo(ReturnUrl ?? "/", replace: true);
+    }
+
+    private async Task LoginAsync()
+    {
+        _loading = true;
+        _errorMessage = null;
+
+        var (ok, error) = await AuthService.LoginAsync(_form.Email, _form.Contrasenya);
+
+        if (ok)
+        {
+            Nav.NavigateTo(ReturnUrl ?? "/", replace: true);
+        }
+        else
+        {
+            _errorMessage = error ?? "Credencials incorrectes. Torna-ho a intentar.";
+            _loading = false;
+        }
+    }
+
+    private class LoginForm
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Contrasenya { get; set; } = string.Empty;
+    }
+}

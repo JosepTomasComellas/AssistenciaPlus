@@ -1,0 +1,39 @@
+@page "/configuracio/any-academic"
+@attribute [Authorize(Roles = "EquipDirectiu")]
+
+<PageTitle>Any acadèmic — Configuració</PageTitle>
+
+<div class="mb-5">
+    <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">Any acadèmic</MudText>
+    <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
+        Configuració del calendari escolar
+    </MudText>
+</div>
+
+<MudAlert Severity="Severity.Info" Class="mb-4">
+    La gestió de l'any acadèmic i el calendari escolar es configura directament a la base de dades
+    o mitjançant l'API. En properes versions s'afegirà la gestió visual aquí.
+</MudAlert>
+
+<MudPaper Elevation="1" Class="pa-6" Style="border-radius:12px">
+    <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight:600">
+        Estructura de cicles i cursos
+    </MudText>
+    <MudText Typo="Typo.body2" Style="color:#718096">
+        L'escola té la següent estructura configurada:
+    </MudText>
+    <MudList T="string" Dense="false" Class="mt-3">
+        <MudListItem T="string" Icon="@Icons.Material.Filled.School">
+            <strong>Educació Infantil (P3, P4, P5)</strong> — Mode Fusteta Digital activat
+        </MudListItem>
+        <MudListItem T="string" Icon="@Icons.Material.Filled.School">
+            <strong>1r Cicle de Primària (1r i 2n)</strong> — Mode Fusteta Digital activat
+        </MudListItem>
+        <MudListItem T="string" Icon="@Icons.Material.Filled.School">
+            <strong>2n Cicle de Primària (3r i 4t)</strong> — Mode llista clàssic
+        </MudListItem>
+        <MudListItem T="string" Icon="@Icons.Material.Filled.School">
+            <strong>3r Cicle de Primària (5è i 6è)</strong> — Mode llista clàssic
+        </MudListItem>
+    </MudList>
+</MudPaper>

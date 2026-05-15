@@ -1,0 +1,364 @@
+@page "/passar-llista"
+@attribute [Authorize]
+@inject GrupService GrupService
+@inject AlumnesService AlumnesService
+@inject AssistenciaService AssistenciaService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Passar llista — AssistenciaPlus</PageTitle>
+
+<!-- Capçalera -->
+<div class="mb-5">
+    <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">Passar llista</MudText>
+    <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
+        @_dataAvui
+    </MudText>
+</div>
+
+@if (_carregant)
+{
+    <div class="d-flex justify-center mt-12">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    </div>
+}
+else if (_fase == Fase.SeleccionarGrup)
+{
+    <!-- FASE 1: Seleccionar grup -->
+    <MudText Typo="Typo.h6" Class="mb-4">Selecciona el grup:</MudText>
+
+    @if (!_grups.Any())
+    {
+        <MudAlert Severity="Severity.Info">
+            No tens cap grup assignat. Contacta amb l'equip directiu.
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            @foreach (var grup in _grups)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="2" Class="cursor-pointer grup-card"
+                        @onclick="() => SeleccionarGrup(grup)">
+                        <MudCardContent Class="pa-5">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary"
+                                Class="mb-2" Style="font-weight:700">
+                                @grup.CursCodi
+                            </MudChip>
+                            <MudText Typo="Typo.h5" Style="font-weight:700">
+                                @grup.NomComplet
+                            </MudText>
+                            <MudText Typo="Typo.body2" Style="color:#718096" Class="mt-1">
+                                @grup.NombreAlumnes alumnes · @grup.CicleNom
+                            </MudText>
+                            @if (grup.UsaModeFusteta)
+                            {
+                                <MudChip T="string" Size="Size.Small"
+                                    Color="Color.Secondary" Class="mt-2"
+                                    Icon="@Icons.Material.Filled.GridView">
+                                    Mode Fusteta Digital
+                                </MudChip>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+}
+else if (_fase == Fase.SeleccionarFranja)
+{
+    <!-- FASE 2: Seleccionar franja horària -->
+    <MudBreadcrumbs Items="_breadcrumbs" Class="px-0 mb-4" />
+
+    <MudText Typo="Typo.h6" Class="mb-4">
+        Selecciona la franja horària — <strong>@_grupSeleccionat!.NomComplet</strong>
+    </MudText>
+
+    <MudGrid>
+        @foreach (var franja in _franjes)
+        {
+            var jaPassada = _registresAvui.Any(r => r.FranjaHorariaId == franja.Id);
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="@(jaPassada ? 1 : 2)"
+                    Class="@($"cursor-pointer franja-card{(jaPassada ? " franja-feta" : "")}")"
+                    @onclick="() => SeleccionarFranja(franja)">
+                    <MudCardContent Class="pa-5">
+                        <div class="d-flex align-center justify-space-between">
+                            <div>
+                                <MudText Typo="Typo.h6" Style="font-weight:600">
+                                    @franja.Nom
+                                </MudText>
+                                <MudText Typo="Typo.body2" Style="color:#718096">
+                                    @franja.HorariDisplay
+                                </MudText>
+                            </div>
+                            @if (jaPassada)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                                    Color="Color.Success" Size="Size.Medium" />
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight"
+                                    Color="Color.Default" />
+                            }
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+else if (_fase == Fase.PassarLlista)
+{
+    <!-- FASE 3: Passar llista -->
+    <MudBreadcrumbs Items="_breadcrumbs" Class="px-0 mb-4" />
+
+    <!-- Selector de mode -->
+    <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-5">
+        <div>
+            <MudText Typo="Typo.h6" Style="font-weight:700">
+                @_grupSeleccionat!.NomComplet — @_franjaSeleccionada!.Nom
+            </MudText>
+            <MudText Typo="Typo.body2" Style="color:#718096">
+                @_franjaSeleccionada.HorariDisplay · @_alumnes.Count alumnes
+            </MudText>
+        </div>
+        @if (_grupSeleccionat.UsaModeFusteta)
+        {
+            <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+                <MudButton StartIcon="@Icons.Material.Filled.GridView"
+                    Variant="@(_modeFusteta ? Variant.Filled : Variant.Outlined)"
+                    OnClick="() => _modeFusteta = true">
+                    Fusteta
+                </MudButton>
+                <MudButton StartIcon="@Icons.Material.Filled.FormatListBulleted"
+                    Variant="@(!_modeFusteta ? Variant.Filled : Variant.Outlined)"
+                    OnClick="() => _modeFusteta = false">
+                    Llista
+                </MudButton>
+            </MudButtonGroup>
+        }
+    </div>
+
+    <!-- Acció ràpida: tots presents -->
+    <div class="d-flex gap-2 mb-4 flex-wrap">
+        <MudButton Variant="Variant.Outlined" Color="Color.Success"
+            StartIcon="@Icons.Material.Filled.DoneAll"
+            Size="Size.Small"
+            OnClick="MarcarTotsPresents">
+            Tots presents
+        </MudButton>
+        <MudText Typo="Typo.body2" Class="ml-auto align-self-center"
+            Style="color:#718096">
+            @_inputs.Count(i => i.Estat == EstatAssistencia.Present) presents ·
+            <span style="color:#C62828;font-weight:600">
+                @_inputs.Count(i => i.Estat == EstatAssistencia.Absent) absents
+            </span>
+            @if (_inputs.Any(i => i.Estat == EstatAssistencia.Tard))
+            {
+                <span> · <span style="color:#F57F17">@_inputs.Count(i => i.Estat == EstatAssistencia.Tard) tard</span></span>
+            }
+        </MudText>
+    </div>
+
+    @if (_modeFusteta)
+    {
+        <!-- MODE FUSTETA DIGITAL -->
+        <ModeFusteta Alumnes="_alumnes" Inputs="_inputs" />
+    }
+    else
+    {
+        <!-- MODE LLISTA CLÀSSICA -->
+        <ModeLlista Alumnes="_alumnes" Inputs="_inputs" />
+    }
+
+    <!-- Botonera de desar -->
+    <MudPaper Elevation="3" Class="pa-4 mt-5 d-flex align-center gap-3 flex-wrap"
+        Style="border-radius:12px;position:sticky;bottom:16px;background:white">
+        <MudTextField @bind-Value="_observacioSessio"
+            Label="Observació de la sessió (opcional)"
+            Variant="Variant.Outlined"
+            Lines="1"
+            Class="flex-grow-1"
+            Adornment="Adornment.Start"
+            AdornmentIcon="@Icons.Material.Filled.Note" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+            StartIcon="@Icons.Material.Filled.Save"
+            Size="Size.Large"
+            OnClick="DesarSessioAsync"
+            Disabled="_desant"
+            Style="min-width:160px">
+            @if (_desant)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Desant...</span>
+            }
+            else
+            {
+                <span>Desar assistència</span>
+            }
+        </MudButton>
+    </MudPaper>
+}
+
+<style>
+    .grup-card, .franja-card {
+        border-radius: 12px !important;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .grup-card:hover, .franja-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0,63,138,0.12) !important;
+    }
+    .franja-feta {
+        opacity: 0.7;
+        background: #F7FAF7 !important;
+    }
+    .cursor-pointer { cursor: pointer; }
+</style>
+
+@code {
+    private enum Fase { SeleccionarGrup, SeleccionarFranja, PassarLlista }
+
+    private Fase _fase = Fase.SeleccionarGrup;
+    private bool _carregant = true;
+    private bool _modeFusteta;
+    private bool _desant;
+    private string _dataAvui = string.Empty;
+    private string? _observacioSessio;
+
+    private List<GrupModel> _grups = [];
+    private List<FranjaHorariaModel> _franjes = [];
+    private List<AlumneModel> _alumnes = [];
+    private List<RegistreAssistenciaModel> _registresAvui = [];
+    private List<AssistenciaAlumneInputModel> _inputs = [];
+
+    private GrupModel? _grupSeleccionat;
+    private FranjaHorariaModel? _franjaSeleccionada;
+
+    private List<BreadcrumbItem> _breadcrumbs = [];
+
+    [SupplyParameterFromQuery]
+    private Guid? GrupId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var info = System.Globalization.CultureInfo.GetCultureInfo("ca-ES");
+        _dataAvui = DateTime.Today.ToString("dddd, d MMMM yyyy", info);
+        if (_dataAvui.Length > 0)
+            _dataAvui = char.ToUpper(_dataAvui[0]) + _dataAvui[1..];
+
+        _grups = await GrupService.GetGrupsAsync();
+        _franjes = await GrupService.GetFranjesAsync();
+
+        // Si ve un grupId per QueryString, anar directament a la selecció de franja
+        if (GrupId.HasValue)
+        {
+            var grup = _grups.FirstOrDefault(g => g.Id == GrupId.Value);
+            if (grup != null)
+                await SeleccionarGrup(grup);
+        }
+
+        _carregant = false;
+    }
+
+    private async Task SeleccionarGrup(GrupModel grup)
+    {
+        _grupSeleccionat = grup;
+        _registresAvui = await AssistenciaService.GetRegistresAsync(
+            grup.Id, DateOnly.FromDateTime(DateTime.Today));
+        ActualitzarBreadcrumbs();
+        _fase = Fase.SeleccionarFranja;
+    }
+
+    private async Task SeleccionarFranja(FranjaHorariaModel franja)
+    {
+        _franjaSeleccionada = franja;
+        _alumnes = await AlumnesService.GetAlumnesPerGrupAsync(_grupSeleccionat!.Id);
+
+        // Carregar registre existent si n'hi ha
+        var registreExistent = _registresAvui.FirstOrDefault(r => r.FranjaHorariaId == franja.Id);
+
+        _inputs = _alumnes.Select(a =>
+        {
+            var assistenciaExistent = registreExistent?.Assistencies
+                .FirstOrDefault(x => x.AlumneId == a.Id);
+
+            return new AssistenciaAlumneInputModel
+            {
+                AlumneId = a.Id,
+                Estat = assistenciaExistent?.Estat ?? EstatAssistencia.Present,
+                Motiu = assistenciaExistent?.Motiu,
+                Torna = assistenciaExistent?.Torna,
+                MinutsRetard = assistenciaExistent?.MinutsRetard,
+                Observacio = assistenciaExistent?.Observacio
+            };
+        }).ToList();
+
+        _observacioSessio = registreExistent?.Observacio;
+        _modeFusteta = _grupSeleccionat!.UsaModeFusteta;
+
+        ActualitzarBreadcrumbs();
+        _fase = Fase.PassarLlista;
+    }
+
+    private void MarcarTotsPresents()
+    {
+        foreach (var input in _inputs)
+        {
+            input.Estat = EstatAssistencia.Present;
+            input.Motiu = null;
+            input.Torna = null;
+            input.MinutsRetard = null;
+            input.Observacio = null;
+        }
+    }
+
+    private async Task DesarSessioAsync()
+    {
+        _desant = true;
+
+        var model = new DesarSessioModel
+        {
+            GrupId = _grupSeleccionat!.Id,
+            FranjaHorariaId = _franjaSeleccionada!.Id,
+            Data = DateOnly.FromDateTime(DateTime.Today),
+            Observacio = _observacioSessio,
+            Assistencies = _inputs
+        };
+
+        var (ok, _, error) = await AssistenciaService.DesarSessioAsync(model);
+
+        if (ok)
+        {
+            Snackbar.Add("Assistència desada correctament", Severity.Success,
+                config => config.Icon = Icons.Material.Filled.CheckCircle);
+            // Recarregar registres
+            _registresAvui = await AssistenciaService.GetRegistresAsync(
+                _grupSeleccionat.Id, DateOnly.FromDateTime(DateTime.Today));
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error al desar l'assistència", Severity.Error);
+        }
+
+        _desant = false;
+    }
+
+    private void ActualitzarBreadcrumbs()
+    {
+        _breadcrumbs =
+        [
+            new("Inici", "/"),
+            new("Passar llista", "/passar-llista"),
+            new(_grupSeleccionat?.NomComplet ?? string.Empty,
+                null, _fase == Fase.SeleccionarFranja),
+            .. (_fase == Fase.PassarLlista
+                ? [new BreadcrumbItem(_franjaSeleccionada?.Nom ?? string.Empty, null, true)]
+                : Array.Empty<BreadcrumbItem>())
+        ];
+    }
+}

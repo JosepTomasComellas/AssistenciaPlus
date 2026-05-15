@@ -1,0 +1,266 @@
+@* Mode Fusteta Digital: targetes visuals per a infantil i primer cicle *@
+
+<div class="fusteta-grid">
+    @foreach (var alumne in Alumnes)
+    {
+        var input = Inputs.FirstOrDefault(i => i.AlumneId == alumne.Id);
+        if (input == null) continue;
+
+        var esAbsent = input.Estat == EstatAssistencia.Absent;
+        var esTard = input.Estat == EstatAssistencia.Tard;
+
+        <div class="@($"fusteta-card{(esAbsent ? " absent" : esTard ? " tard" : " present")}")"
+             @onclick="() => AlternarEstat(input, alumne)"
+             title="@alumne.NomFusteta — Toca per canviar estat">
+
+            <!-- Foto o avatar amb inicials -->
+            @if (!string.IsNullOrEmpty(alumne.FotoPath))
+            {
+                <img src="@alumne.FotoPath" alt="@alumne.NomFusteta"
+                     class="fusteta-foto" />
+            }
+            else
+            {
+                <div class="fusteta-avatar">
+                    <span>@alumne.Inicials</span>
+                </div>
+            }
+
+            <!-- Icona d'estat -->
+            <div class="fusteta-estat-icon">
+                @if (esAbsent)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Cancel"
+                        Style="color:#C62828;font-size:1.6rem" />
+                }
+                else if (esTard)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.AccessTime"
+                        Style="color:#F57F17;font-size:1.6rem" />
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                        Style="color:#2E7D32;font-size:1.6rem" />
+                }
+            </div>
+
+            <!-- Nom -->
+            <div class="fusteta-nom">
+                @alumne.NomFusteta
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Dialog per a detalls d'absència -->
+<MudDialog @bind-Visible="_dialogObert" Options="@_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            @_alumneDialog?.NomFusteta — Detall absència
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_inputDialog != null)
+        {
+            <MudStack Spacing="3">
+                <MudSelect T="EstatAssistencia"
+                    @bind-Value="_inputDialog.Estat"
+                    Label="Estat"
+                    Variant="Variant.Outlined">
+                    <MudSelectItem Value="EstatAssistencia.Absent">Absent</MudSelectItem>
+                    <MudSelectItem Value="EstatAssistencia.Tard">Tard</MudSelectItem>
+                    <MudSelectItem Value="EstatAssistencia.AbsenciaParcial">Absència parcial</MudSelectItem>
+                </MudSelect>
+
+                @if (_inputDialog.Estat != EstatAssistencia.Present)
+                {
+                    <MudSelect T="MotiuAbsencia?"
+                        @bind-Value="_inputDialog.Motiu"
+                        Label="Motiu"
+                        Variant="Variant.Outlined">
+                        <MudSelectItem Value="@((MotiuAbsencia?)MotiuAbsencia.SenseMotiu)">Sense motiu</MudSelectItem>
+                        <MudSelectItem Value="@((MotiuAbsencia?)MotiuAbsencia.Metge)">Metge</MudSelectItem>
+                        <MudSelectItem Value="@((MotiuAbsencia?)MotiuAbsencia.NoEsTrobaBe)">No es troba bé</MudSelectItem>
+                        <MudSelectItem Value="@((MotiuAbsencia?)MotiuAbsencia.FamiliaVeBuscar)">La família ve a buscar-lo/a</MudSelectItem>
+                        <MudSelectItem Value="@((MotiuAbsencia?)MotiuAbsencia.ServeiExtern)">Servei extern / activitat</MudSelectItem>
+                    </MudSelect>
+
+                    <MudTextField @bind-Value="_inputDialog.Observacio"
+                        Label="Observació (opcional)"
+                        Variant="Variant.Outlined"
+                        Lines="2" />
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="TancarDialog" Variant="Variant.Text">
+            Cancel·lar
+        </MudButton>
+        <MudButton OnClick="ConfirmarDialog"
+            Variant="Variant.Filled" Color="Color.Primary">
+            Confirmar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .fusteta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 12px;
+        padding-bottom: 120px;
+    }
+
+    .fusteta-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 12px 8px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        position: relative;
+        border: 3px solid transparent;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .fusteta-card:hover {
+        transform: scale(1.04);
+    }
+
+    .fusteta-card:active {
+        transform: scale(0.97);
+    }
+
+    .fusteta-card.present {
+        background: #F0FFF4;
+        border-color: #2E7D32;
+    }
+
+    .fusteta-card.absent {
+        background: #FFF5F5;
+        border-color: #C62828;
+        opacity: 0.85;
+    }
+
+    .fusteta-card.tard {
+        background: #FFFBF0;
+        border-color: #F57F17;
+    }
+
+    .fusteta-foto {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-bottom: 6px;
+    }
+
+    .fusteta-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #003F8A, #1A5FAD);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 6px;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: white;
+    }
+
+    .fusteta-estat-icon {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+    }
+
+    .fusteta-nom {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-align: center;
+        line-height: 1.2;
+        color: #1A2744;
+        word-break: break-word;
+        max-width: 100%;
+    }
+
+    @@media (max-width: 600px) {
+        .fusteta-grid {
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 8px;
+        }
+        .fusteta-foto, .fusteta-avatar {
+            width: 56px;
+            height: 56px;
+        }
+        .fusteta-avatar {
+            font-size: 1.1rem;
+        }
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public List<AlumneModel> Alumnes { get; set; } = [];
+    [Parameter, EditorRequired] public List<AssistenciaAlumneInputModel> Inputs { get; set; } = [];
+
+    private bool _dialogObert;
+    private AlumneModel? _alumneDialog;
+    private AssistenciaAlumneInputModel? _inputDialog;
+    private AssistenciaAlumneInputModel? _inputDialogCopia;
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.ExtraSmall,
+        FullWidth = true,
+        CloseButton = true
+    };
+
+    private void AlternarEstat(AssistenciaAlumneInputModel input, AlumneModel alumne)
+    {
+        if (input.Estat == EstatAssistencia.Present)
+        {
+            // Obrir dialog per seleccionar tipus d'absència
+            _alumneDialog = alumne;
+            _inputDialog = input;
+            _inputDialogCopia = new AssistenciaAlumneInputModel
+            {
+                AlumneId = input.AlumneId,
+                Estat = input.Estat,
+                Motiu = input.Motiu,
+                Observacio = input.Observacio
+            };
+            input.Estat = EstatAssistencia.Absent;
+            _dialogObert = true;
+        }
+        else
+        {
+            // Marcar com a Present (toggle ràpid)
+            input.Estat = EstatAssistencia.Present;
+            input.Motiu = null;
+            input.Torna = null;
+            input.Observacio = null;
+        }
+    }
+
+    private void TancarDialog()
+    {
+        // Restaurar estat anterior
+        if (_inputDialog != null && _inputDialogCopia != null)
+        {
+            _inputDialog.Estat = _inputDialogCopia.Estat;
+            _inputDialog.Motiu = _inputDialogCopia.Motiu;
+            _inputDialog.Observacio = _inputDialogCopia.Observacio;
+        }
+        _dialogObert = false;
+    }
+
+    private void ConfirmarDialog()
+    {
+        _dialogObert = false;
+    }
+}

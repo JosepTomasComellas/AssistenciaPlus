@@ -1,0 +1,309 @@
+@page "/informes"
+@attribute [Authorize(Roles = "EquipDirectiu,Administratiu")]
+@inject GrupService GrupService
+@inject InformesService InformesService
+@inject ISnackbar Snackbar
+
+<PageTitle>Informes — AssistenciaPlus</PageTitle>
+
+<div class="mb-5">
+    <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">Informes d'assistència</MudText>
+    <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
+        Consulta i exporta les dades d'assistència
+    </MudText>
+</div>
+
+<!-- Filtres -->
+<MudPaper Elevation="1" Class="pa-5 mb-5" Style="border-radius:12px">
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect T="string" @bind-Value="_tipusInforme"
+                Label="Tipus d'informe"
+                Variant="Variant.Outlined">
+                <MudSelectItem Value="@("mensual")">Informe mensual</MudSelectItem>
+                <MudSelectItem Value="@("trimestral")">Informe trimestral</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect T="Guid?" @bind-Value="_grupSeleccionat"
+                Label="Grup"
+                Variant="Variant.Outlined"
+                Disabled="_carregantGrups">
+                <MudSelectItem Value="@((Guid?)null)">Tots els grups</MudSelectItem>
+                @foreach (var grup in _grups)
+                {
+                    <MudSelectItem Value="@((Guid?)grup.Id)">
+                        @grup.NomComplet (@grup.CursCodi)
+                    </MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        @if (_tipusInforme == "mensual")
+        {
+            <MudItem xs="6" sm="4" md="2">
+                <MudSelect T="int" @bind-Value="_any"
+                    Label="Any"
+                    Variant="Variant.Outlined">
+                    @for (int y = DateTime.Now.Year; y >= DateTime.Now.Year - 2; y--)
+                    {
+                        var year = y;
+                        <MudSelectItem Value="@year">@year</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="6" sm="4" md="2">
+                <MudSelect T="int" @bind-Value="_mes"
+                    Label="Mes"
+                    Variant="Variant.Outlined">
+                    @foreach (var (num, nom) in _mesos)
+                    {
+                        <MudSelectItem Value="@num">@nom</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        }
+        else
+        {
+            <MudItem xs="6" sm="4" md="2">
+                <MudSelect T="int" @bind-Value="_trimestre"
+                    Label="Trimestre"
+                    Variant="Variant.Outlined">
+                    <MudSelectItem Value="1">1r trimestre</MudSelectItem>
+                    <MudSelectItem Value="2">2n trimestre</MudSelectItem>
+                    <MudSelectItem Value="3">3r trimestre</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        }
+
+        <MudItem xs="12" sm="4" md="2" Class="d-flex align-end">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                StartIcon="@Icons.Material.Filled.BarChart"
+                FullWidth="true"
+                OnClick="GenerarInformeAsync"
+                Disabled="_generant || !_grupSeleccionat.HasValue">
+                @if (_generant)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                Generar informe
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<!-- Resultats -->
+@if (_informe != null)
+{
+    <MudPaper Elevation="1" Class="pa-5" Style="border-radius:12px">
+
+        <!-- Capçalera de l'informe -->
+        <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-5">
+            <div>
+                <MudText Typo="Typo.h5" Style="font-weight:700">
+                    @_informe.Titol
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color:#718096">
+                    @_informe.AnyAcademic ·
+                    @if (_tipusInforme == "mensual")
+                    {
+                        <span>@_mesos.FirstOrDefault(m => m.Num == _mes).Nom @_any</span>
+                    }
+                    else
+                    {
+                        <span>@(_trimestre)r trimestre</span>
+                    }
+                    · @_informe.TotalAlumnes alumnes
+                </MudText>
+            </div>
+            <AuthorizeView Roles="EquipDirectiu">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                    StartIcon="@Icons.Material.Filled.Email"
+                    OnClick="EnviarInformeAsync"
+                    Disabled="_enviant">
+                    @if (_enviant)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Enviar per correu
+                </MudButton>
+            </AuthorizeView>
+        </div>
+
+        <!-- Estadístiques globals -->
+        <MudGrid Class="mb-5">
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-4 text-center" Elevation="0"
+                    Style="background:#F0FFF4;border-radius:8px">
+                    <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">
+                        @_informe.Alumnes.Count(a => !a.EsAlerta)
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color:#718096">Sense alertes</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-4 text-center" Elevation="0"
+                    Style="background:#FFFBF0;border-radius:8px">
+                    <MudText Typo="Typo.h4" Style="font-weight:700;color:#F57F17">
+                        @_informe.Alumnes.Count(a => a.EsAlerta && !a.EsCritic)
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color:#718096">En alerta (&gt;10%)</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-4 text-center" Elevation="0"
+                    Style="background:#FFF5F5;border-radius:8px">
+                    <MudText Typo="Typo.h4" Style="font-weight:700;color:#C62828">
+                        @_informe.Alumnes.Count(a => a.EsCritic)
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color:#718096">Situació crítica (&gt;25%)</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-4 text-center" Elevation="0"
+                    Style="background:#EBF4FF;border-radius:8px">
+                    @{
+                        var mitjana = _informe.Alumnes.Any()
+                            ? _informe.Alumnes.Average(a => (double)a.PercentatgeAbsencia)
+                            : 0;
+                    }
+                    <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">
+                        @($"{mitjana:F1}")%
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color:#718096">% absència mitjana</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Taula d'alumnes -->
+        <MudTable Items="_informe.Alumnes.OrderByDescending(a => a.PercentatgeAbsencia)"
+            Hover="true" Dense="false" Striped="true"
+            Style="border-radius:8px;overflow:hidden">
+            <HeaderContent>
+                <MudTh>Alumne</MudTh>
+                <MudTh Style="text-align:center">Presents</MudTh>
+                <MudTh Style="text-align:center">Absents</MudTh>
+                <MudTh Style="text-align:center">% Absència</MudTh>
+                <MudTh Style="text-align:center">Estat</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudText Style="font-weight:500">@context.AlumneNom</MudText>
+                    <MudText Typo="Typo.caption" Style="color:#718096">@context.GrupNom</MudText>
+                </MudTd>
+                <MudTd Style="text-align:center">@context.FrangesPresents</MudTd>
+                <MudTd Style="text-align:center">@context.FrangesAbsents</MudTd>
+                <MudTd Style="text-align:center">
+                    <MudText Style="@GetPercentatgeStyle(context)">
+                        @($"{context.PercentatgeAbsencia:F1}")%
+                    </MudText>
+                </MudTd>
+                <MudTd Style="text-align:center">
+                    @if (context.EsCritic)
+                    {
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small"
+                            Icon="@Icons.Material.Filled.Warning">
+                            Crític
+                        </MudChip>
+                    }
+                    else if (context.EsAlerta)
+                    {
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small"
+                            Icon="@Icons.Material.Filled.Info">
+                            Alerta
+                        </MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small"
+                            Icon="@Icons.Material.Filled.CheckCircle">
+                            Correcte
+                        </MudChip>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+}
+else if (_errorInforme != null)
+{
+    <MudAlert Severity="Severity.Error">@_errorInforme</MudAlert>
+}
+
+@code {
+    private string _tipusInforme = "mensual";
+    private List<GrupModel> _grups = [];
+    private Guid? _grupSeleccionat;
+    private int _any = DateTime.Now.Year;
+    private int _mes = DateTime.Now.Month;
+    private int _trimestre = (DateTime.Now.Month - 1) / 3 + 1;
+    private bool _carregantGrups = true;
+    private bool _generant;
+    private bool _enviant;
+    private InformeMensualModel? _informe;
+    private string? _errorInforme;
+
+    private readonly (int Num, string Nom)[] _mesos =
+    [
+        (1, "Gener"), (2, "Febrer"), (3, "Març"), (4, "Abril"),
+        (5, "Maig"), (6, "Juny"), (7, "Juliol"), (8, "Agost"),
+        (9, "Setembre"), (10, "Octubre"), (11, "Novembre"), (12, "Desembre")
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _grups = await GrupService.GetGrupsAsync();
+        if (_grups.Count == 1)
+            _grupSeleccionat = _grups[0].Id;
+        _carregantGrups = false;
+    }
+
+    private async Task GenerarInformeAsync()
+    {
+        if (!_grupSeleccionat.HasValue) return;
+
+        _generant = true;
+        _errorInforme = null;
+        _informe = null;
+
+        try
+        {
+            _informe = await InformesService.GetInformeMensualGrupAsync(
+                _grupSeleccionat.Value, _any, _mes);
+
+            if (_informe == null)
+                _errorInforme = "No s'ha pogut generar l'informe. Comproveu els filtres.";
+        }
+        catch (Exception ex)
+        {
+            _errorInforme = $"Error: {ex.Message}";
+        }
+
+        _generant = false;
+    }
+
+    private async Task EnviarInformeAsync()
+    {
+        if (!_grupSeleccionat.HasValue || _informe == null) return;
+
+        _enviant = true;
+        var (ok, error) = await InformesService.EnviarInformeMensualAsync(
+            _grupSeleccionat.Value, _any, _mes);
+
+        if (ok)
+            Snackbar.Add("Informe enviat per correu correctament", Severity.Success);
+        else
+            Snackbar.Add(error ?? "Error al enviar l'informe", Severity.Error);
+
+        _enviant = false;
+    }
+
+    private static string GetPercentatgeStyle(InformeAlumneModel a)
+    {
+        if (a.EsCritic) return "font-weight:700;color:#C62828";
+        if (a.EsAlerta) return "font-weight:600;color:#F57F17";
+        return "color:#2E7D32";
+    }
+}
