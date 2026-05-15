@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  DOTNET_VERSION: '8.0.x'
+  DOTNET_VERSION: '10.0.x'
 
 jobs:
   # ── 1. Build i test ───────────────────────────────────────
@@ -51,8 +51,4 @@ jobs:
           port: 22
           timeout: 300s
           script: |
-            set -e
-            cd /docker/AssistenciaPlus
-            echo "=== Iniciant desplegament: $(date) ==="
-            bash scripts/deploy.sh --update
-            echo "=== Desplegament completat: $(date) ==="
+            bash /docker/AssistenciaPlus/redeploy.sh
