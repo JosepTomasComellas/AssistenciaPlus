@@ -35,6 +35,7 @@ builder.Services.AddScoped<AssistenciaService>();
 builder.Services.AddScoped<InformesService>();
 builder.Services.AddScoped<ConfiguracioService>();
 builder.Services.AddScoped<SignalRService>();
+builder.Services.AddScoped<IdiomesService>();
 
 // MudBlazor
 builder.Services.AddMudServices(config =>
@@ -47,4 +48,10 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.ShowTransitionDuration = 300;
 });
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+// Inicialitzar idioma des de localStorage
+var idiomesService = host.Services.GetRequiredService<IdiomesService>();
+await idiomesService.InicialitzarAsync();
+
+await host.RunAsync();

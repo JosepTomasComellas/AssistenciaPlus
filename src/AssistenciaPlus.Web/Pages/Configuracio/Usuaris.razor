@@ -74,14 +74,16 @@ else
                         Size="Size.Small" />
                 </MudTd>
                 <MudTd Style="text-align:center">
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                        Size="Size.Small" Color="Color.Primary"
-                        Title="Editar"
-                        OnClick="() => ObrirEditarUsuari(context)" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Email"
-                        Size="Size.Small" Color="Color.Secondary"
-                        Title="Enviar credencials"
-                        OnClick="() => EnviarCredencials(context)" />
+                    <MudTooltip Text="Editar">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                            Size="Size.Small" Color="Color.Primary"
+                            OnClick="() => ObrirEditarUsuari(context)" />
+                    </MudTooltip>
+                    <MudTooltip Text="Enviar credencials">
+                        <MudIconButton Icon="@Icons.Material.Filled.Email"
+                            Size="Size.Small" Color="Color.Secondary"
+                            OnClick="() => EnviarCredencials(context)" />
+                    </MudTooltip>
                 </MudTd>
             </RowTemplate>
             <NoRecordsContent>

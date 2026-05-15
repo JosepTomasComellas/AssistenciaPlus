@@ -1,17 +1,20 @@
 @inherits LayoutComponentBase
 @inject AuthService AuthService
+@inject IdiomesService Idiomes
 @inject NavigationManager Nav
+@implements IDisposable
 
 <AuthorizeView>
     <Authorized>
         <MudLayout>
             <!-- AppBar -->
             <MudAppBar Elevation="2" Color="Color.Primary" Dense="false">
-                <MudIconButton Icon="@Icons.Material.Filled.Menu"
-                    Color="Color.Inherit"
-                    Edge="Edge.Start"
-                    OnClick="ToggleDrawer"
-                    Title="Obrir menú" />
+                <MudTooltip Text="Obrir menú">
+                    <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                        Color="Color.Inherit"
+                        Edge="Edge.Start"
+                        OnClick="ToggleDrawer" />
+                </MudTooltip>
 
                 <!-- Logo i nom escola -->
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="ml-1">
@@ -31,6 +34,15 @@
                 </MudStack>
 
                 <MudSpacer />
+
+                <!-- Toggle idioma -->
+                <MudToggleIconButton
+                    Toggled="@(!Idiomes.EsCatala)"
+                    ToggledChanged="CanviarIdiomaAsync"
+                    Icon="@("CA")" ToggledIcon="@("ES")"
+                    Color="Color.Inherit" ToggledColor="Color.Inherit"
+                    Style="font-size:0.7rem;font-weight:700;min-width:36px"
+                    title="@(Idiomes.EsCatala ? "Canviar a castellà" : "Cambiar a català")" />
 
                 <!-- Usuari actual -->
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
@@ -88,7 +100,18 @@
 @code {
     private bool _drawerOpen = true;
 
+    protected override void OnInitialized()
+        => Idiomes.IdiomaCanviat += OnIdiomaCanviat;
+
+    public void Dispose()
+        => Idiomes.IdiomaCanviat -= OnIdiomaCanviat;
+
+    private void OnIdiomaCanviat() => InvokeAsync(StateHasChanged);
+
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private async Task CanviarIdiomaAsync(bool esEspanyol)
+        => await Idiomes.CanviarIdiomaAsync(esEspanyol ? "es" : "ca");
 
     private async Task LogoutAsync()
     {

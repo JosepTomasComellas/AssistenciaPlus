@@ -18,10 +18,12 @@ RUN dotnet publish AssistenciaPlus.Web/AssistenciaPlus.Web.csproj \
 # ── Stage 2: Runtime nginx ────────────────────────────────
 FROM nginx:1.25-alpine AS final
 
+RUN apk add --no-cache curl
+
 COPY --from=build /app/publish/wwwroot /usr/share/nginx/html
 COPY AssistenciaPlus.Web/nginx-blazor.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -qO- http://localhost:8080/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -sf http://localhost:8080/health || exit 1
