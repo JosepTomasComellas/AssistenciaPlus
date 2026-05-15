@@ -1,4 +1,5 @@
 using AssistenciaPlus.Domain.Entities;
+using System.ComponentModel.DataAnnotations;
 
 namespace AssistenciaPlus.Application.DTOs;
 
@@ -34,10 +35,19 @@ public record AssistenciaAlumneDto
 
 public record DesarSessioDto
 {
+    [Required]
     public Guid GrupId { get; init; }
+
+    [Required]
     public Guid FranjaHorariaId { get; init; }
+
+    [Required]
     public DateOnly Data { get; init; }
+
+    [StringLength(500)]
     public string? Observacio { get; init; }
+
+    [Required]
     public List<AssistenciaAlumneInputDto> Assistencies { get; init; } = [];
 }
 
@@ -54,10 +64,18 @@ public record AssistenciaAlumneInputDto
 
 public record AplicarAbsenciaParcialDto
 {
+    [Required]
     public Guid AlumneId { get; init; }
+
+    [Required]
     public Guid GrupId { get; init; }
+
+    [Required]
     public DateOnly Data { get; init; }
+
+    [Required]
     public Guid FranjaActualId { get; init; }
+
     public MotiuAbsencia Motiu { get; init; }
     public bool Torna { get; init; }
 }

@@ -5,6 +5,7 @@ using AssistenciaPlus.Core.Interfaces;
 using AssistenciaPlus.Infrastructure.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 
 namespace AssistenciaPlus.Api.Controllers;
 
@@ -40,6 +41,8 @@ public class InformesController : ControllerBase
     {
         if (mes < 1 || mes > 12)
             return BadRequest(ApiResponse<InformeMensualDto>.Fail("El mes ha de ser entre 1 i 12"));
+        if (any < 2000 || any > DateTime.UtcNow.Year + 1)
+            return BadRequest(ApiResponse<InformeMensualDto>.Fail("Any fora de rang"));
 
         var informe = await _informesService.GenerarInformeMensualGrupAsync(grupId, any, mes, ct);
         return Ok(ApiResponse<InformeMensualDto>.Ok(informe));
@@ -52,6 +55,8 @@ public class InformesController : ControllerBase
     {
         if (mes < 1 || mes > 12)
             return BadRequest(ApiResponse<InformeMensualDto>.Fail("El mes ha de ser entre 1 i 12"));
+        if (any < 2000 || any > DateTime.UtcNow.Year + 1)
+            return BadRequest(ApiResponse<InformeMensualDto>.Fail("Any fora de rang"));
 
         var informe = await _informesService.GenerarInformeMensualCicleAsync(cicleId, any, mes, ct);
         return Ok(ApiResponse<InformeMensualDto>.Ok(informe));
@@ -157,20 +162,22 @@ public class InformesController : ControllerBase
         var alumnesAlerta = informe.Alumnes.Where(a => a.EsAlerta && !a.EsCritic).ToList();
         var alumnesCritic = informe.Alumnes.Where(a => a.EsCritic).ToList();
 
+        static string H(string? s) => WebUtility.HtmlEncode(s ?? string.Empty);
+
         return $"""
-            <h2>Informe d'assistència mensual - {informe.GrupNom ?? informe.CicleNom}</h2>
-            <p><strong>Any acadèmic:</strong> {informe.AnyAcademic}</p>
+            <h2>Informe d'assistència mensual - {H(informe.GrupNom ?? informe.CicleNom)}</h2>
+            <p><strong>Any acadèmic:</strong> {H(informe.AnyAcademic)}</p>
             <p><strong>Període:</strong> {informe.Mes}/{informe.Any}</p>
             <p><strong>Total alumnes:</strong> {informe.TotalAlumnes}</p>
 
             <h3>Alumnes en situació crítica (&gt;25% absència)</h3>
             {(alumnesCritic.Any()
-                ? $"<ul>{string.Join("", alumnesCritic.Select(a => $"<li><strong>{a.AlumneNom}</strong> — {a.PercentatgeAbsencia}%</li>"))}</ul>"
+                ? $"<ul>{string.Join("", alumnesCritic.Select(a => $"<li><strong>{H(a.AlumneNom)}</strong> — {a.PercentatgeAbsencia}%</li>"))}</ul>"
                 : "<p>Cap alumne en situació crítica.</p>")}
 
             <h3>Alumnes en alerta (&gt;10% absència)</h3>
             {(alumnesAlerta.Any()
-                ? $"<ul>{string.Join("", alumnesAlerta.Select(a => $"<li>{a.AlumneNom} — {a.PercentatgeAbsencia}%</li>"))}</ul>"
+                ? $"<ul>{string.Join("", alumnesAlerta.Select(a => $"<li>{H(a.AlumneNom)} — {a.PercentatgeAbsencia}%</li>"))}</ul>"
                 : "<p>Cap alumne en alerta.</p>")}
 
             <p><em>Generat automàticament per AssistenciaPlus</em></p>

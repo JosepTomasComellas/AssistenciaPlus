@@ -16,17 +16,20 @@ public class AssistenciaController : BaseApiController
 {
     private readonly IAssistenciaService _assistenciaService;
     private readonly IAssistenciaRepository _assistenciaRepo;
+    private readonly IGrupRepository _grupRepo;
     private readonly IHubContext<Middleware.AttendanceHub> _hub;
     private readonly ILogger<AssistenciaController> _logger;
 
     public AssistenciaController(
         IAssistenciaService assistenciaService,
         IAssistenciaRepository assistenciaRepo,
+        IGrupRepository grupRepo,
         IHubContext<Middleware.AttendanceHub> hub,
         ILogger<AssistenciaController> logger)
     {
         _assistenciaService = assistenciaService;
         _assistenciaRepo = assistenciaRepo;
+        _grupRepo = grupRepo;
         _hub = hub;
         _logger = logger;
     }
@@ -73,6 +76,13 @@ public class AssistenciaController : BaseApiController
         if (rol == nameof(RolUsuari.Administratiu))
             return Forbid();
 
+        if (rol == nameof(RolUsuari.Mestre))
+        {
+            var grup = await _grupRepo.GetByIdAsync(dto.GrupId, ct);
+            if (grup == null) return NotFound(ApiResponse<RegistreAssistenciaDto>.Fail("Grup no trobat"));
+            if (grup.TutorId != mestreId) return Forbid();
+        }
+
         var registre = await _assistenciaService.DesarSessioCompletaAsync(dto, mestreId, ct);
 
         // Notificació en temps real a l'equip directiu
@@ -99,6 +109,13 @@ public class AssistenciaController : BaseApiController
 
         if (rol == nameof(RolUsuari.Administratiu))
             return Forbid();
+
+        if (rol == nameof(RolUsuari.Mestre))
+        {
+            var grup = await _grupRepo.GetByIdAsync(dto.GrupId, ct);
+            if (grup == null) return NotFound(ApiResponse.Fail("Grup no trobat"));
+            if (grup.TutorId != mestreId) return Forbid();
+        }
 
         await _assistenciaService.AplicarAbsenciaParcialRestaDiaAsync(dto, mestreId, ct);
         return Ok(ApiResponse.Ok());

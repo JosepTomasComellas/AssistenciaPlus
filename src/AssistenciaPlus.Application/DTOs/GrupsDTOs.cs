@@ -55,43 +55,69 @@ public record AlumneDto
 
 public record CrearCicleDto
 {
+    [Required][StringLength(60, MinimumLength = 1)]
     public string Nom { get; init; } = string.Empty;
+
+    [Range(1, 99)]
     public int Ordre { get; init; }
 }
 
 public record ActualitzarCicleDto
 {
+    [Required][StringLength(60, MinimumLength = 1)]
     public string Nom { get; init; } = string.Empty;
+
+    [Range(1, 99)]
     public int Ordre { get; init; }
 }
 
 public record CrearCursDto
 {
+    [Required]
     public Guid CicleId { get; init; }
+
+    [Required][StringLength(60, MinimumLength = 1)]
     public string Nom { get; init; } = string.Empty;
+
+    [Required][StringLength(10, MinimumLength = 1)]
     public string Codi { get; init; } = string.Empty;
+
+    [Range(1, 99)]
     public int Ordre { get; init; }
+
     public bool UsaModeFusteta { get; init; }
 }
 
 public record ActualitzarCursDto
 {
+    [Required][StringLength(60, MinimumLength = 1)]
     public string Nom { get; init; } = string.Empty;
+
+    [Required][StringLength(10, MinimumLength = 1)]
     public string Codi { get; init; } = string.Empty;
+
+    [Range(1, 99)]
     public int Ordre { get; init; }
+
     public bool UsaModeFusteta { get; init; }
 }
 
 public record CrearGrupDto
 {
+    [Required]
     public Guid CursId { get; init; }
+
+    [Required][StringLength(3, MinimumLength = 1)]
     public string Lletra { get; init; } = string.Empty;
+
     public Guid? TutorId { get; init; }
 }
 
 public record ActualitzarGrupDto
 {
+    [Required][StringLength(3, MinimumLength = 1)]
     public string Lletra { get; init; } = string.Empty;
+
     public Guid? TutorId { get; init; }
 }
 

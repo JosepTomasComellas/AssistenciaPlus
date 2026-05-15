@@ -1,4 +1,5 @@
 using AssistenciaPlus.Domain.Entities;
+using System.ComponentModel.DataAnnotations;
 
 namespace AssistenciaPlus.Application.DTOs;
 
@@ -42,13 +43,30 @@ public record ConfigurarDiesDto
 
 public record CrearAnyAcademicDto
 {
+    [Required][StringLength(20, MinimumLength = 1)]
     public string Nom { get; init; } = string.Empty;
+
+    [Required]
     public DateOnly DataInici { get; init; }
+
+    [Required]
     public DateOnly DataFi { get; init; }
+
+    [Required]
     public DateOnly IniciT1 { get; init; }
+
+    [Required]
     public DateOnly FiT1 { get; init; }
+
+    [Required]
     public DateOnly IniciT2 { get; init; }
+
+    [Required]
     public DateOnly FiT2 { get; init; }
+
+    [Required]
     public DateOnly IniciT3 { get; init; }
+
+    [Required]
     public DateOnly FiT3 { get; init; }
 }
