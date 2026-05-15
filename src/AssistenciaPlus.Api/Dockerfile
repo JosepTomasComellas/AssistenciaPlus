@@ -24,7 +24,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
 WORKDIR /app
 
 # Instal·lar curl per healthcheck
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
+RUN apt-get update && apt-get install -y --no-install-recommends adduser curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Crear directoris necessaris
