@@ -204,6 +204,13 @@
                     <MudTextField @bind-Value="_formCognom2" Label="Segon cognom"
                         Variant="Variant.Outlined" />
                 </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudDatePicker @bind-Date="_formDataNaixement"
+                        Label="Data de naixement"
+                        Variant="Variant.Outlined"
+                        DateFormat="dd/MM/yyyy"
+                        Editable="true" />
+                </MudItem>
                 <MudItem xs="12" sm="3">
                     <MudNumericField T="int" @bind-Value="_formOrdreFusteta"
                         Label="Ordre Fusteta"
@@ -251,12 +258,13 @@
     private string _formNom = string.Empty;
     private string _formCognom1 = string.Empty;
     private string? _formCognom2;
+    private DateTime? _formDataNaixement;
     private int _formOrdreFusteta;
     private bool _formEsActiu = true;
 
     private readonly DialogOptions _dialogOptions = new()
     {
-        MaxWidth = MaxWidth.Small,
+        MaxWidth = MaxWidth.Medium,
         FullWidth = true,
         CloseButton = true
     };
@@ -334,6 +342,7 @@
         _formNom = string.Empty;
         _formCognom1 = string.Empty;
         _formCognom2 = null;
+        _formDataNaixement = null;
         _formOrdreFusteta = _alumnes.Count + 1;
         _formEsActiu = true;
         _dialogObert = true;
@@ -345,6 +354,9 @@
         _formNom = a.Nom;
         _formCognom1 = a.Cognom1;
         _formCognom2 = a.Cognom2;
+        _formDataNaixement = a.DataNaixement.HasValue
+            ? a.DataNaixement.Value.ToDateTime(TimeOnly.MinValue)
+            : null;
         _formOrdreFusteta = a.OrdreFusteta;
         _formEsActiu = a.EsActiu;
         _dialogObert = true;
@@ -367,6 +379,9 @@
                 Nom = _formNom,
                 Cognom1 = _formCognom1,
                 Cognom2 = _formCognom2,
+                DataNaixement = _formDataNaixement.HasValue
+                    ? DateOnly.FromDateTime(_formDataNaixement.Value)
+                    : null,
                 GrupId = _grupSeleccionat!.Value,
                 OrdreFusteta = _formOrdreFusteta
             });
@@ -391,6 +406,9 @@
                     Nom = _formNom,
                     Cognom1 = _formCognom1,
                     Cognom2 = _formCognom2,
+                    DataNaixement = _formDataNaixement.HasValue
+                        ? DateOnly.FromDateTime(_formDataNaixement.Value)
+                        : null,
                     OrdreFusteta = _formOrdreFusteta,
                     EsActiu = _formEsActiu
                 });

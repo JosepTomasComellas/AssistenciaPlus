@@ -138,6 +138,59 @@ public class GrupRepository : IGrupRepository
 
     public Task<int> SaveChangesAsync(CancellationToken ct = default)
         => _ctx.SaveChangesAsync(ct);
+
+    public Task<Cicle?> GetCiclePerIdAsync(Guid id, CancellationToken ct = default)
+        => _ctx.Cicles.Include(c => c.Cursos).FirstOrDefaultAsync(c => c.Id == id, ct);
+
+    public async Task<Cicle> AfegirCicleAsync(Cicle cicle, CancellationToken ct = default)
+    {
+        await _ctx.Cicles.AddAsync(cicle, ct);
+        return cicle;
+    }
+
+    public Task ActualitzarCicleAsync(Cicle cicle, CancellationToken ct = default)
+    {
+        _ctx.Entry(cicle).State = EntityState.Modified;
+        return Task.CompletedTask;
+    }
+
+    public async Task EsborrarCicleAsync(Guid id, CancellationToken ct = default)
+    {
+        var cicle = await _ctx.Cicles.FindAsync(new object[] { id }, ct);
+        if (cicle != null)
+        {
+            cicle.IsDeleted = true;
+            _ctx.Entry(cicle).State = EntityState.Modified;
+        }
+    }
+
+    public Task<Curs?> GetCursPerIdAsync(Guid id, CancellationToken ct = default)
+        => _ctx.Cursos
+            .Include(c => c.Cicle)
+            .Include(c => c.Grups)
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
+
+    public async Task<Curs> AfegirCursAsync(Curs curs, CancellationToken ct = default)
+    {
+        await _ctx.Cursos.AddAsync(curs, ct);
+        return curs;
+    }
+
+    public Task ActualitzarCursAsync(Curs curs, CancellationToken ct = default)
+    {
+        _ctx.Entry(curs).State = EntityState.Modified;
+        return Task.CompletedTask;
+    }
+
+    public async Task EsborrarCursAsync(Guid id, CancellationToken ct = default)
+    {
+        var curs = await _ctx.Cursos.FindAsync(new object[] { id }, ct);
+        if (curs != null)
+        {
+            curs.IsDeleted = true;
+            _ctx.Entry(curs).State = EntityState.Modified;
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════

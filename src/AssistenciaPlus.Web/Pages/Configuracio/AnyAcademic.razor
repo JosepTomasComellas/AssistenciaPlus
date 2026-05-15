@@ -1,7 +1,6 @@
 @page "/configuracio/any-academic"
 @attribute [Authorize(Roles = "EquipDirectiu")]
 @inject ConfiguracioService ConfiguracioService
-@inject GrupService GrupService
 @inject ISnackbar Snackbar
 
 <PageTitle>Any acadèmic — Configuració</PageTitle>
@@ -97,38 +96,80 @@ else
         }
     </MudPaper>
 
-    <!-- Estructura de cicles (informativa) -->
+    <!-- Estructura de cicles i cursos (editable) -->
     <MudPaper Elevation="1" Class="pa-4" Style="border-radius:12px">
-        <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:600">
-            Estructura de cicles i cursos
-        </MudText>
+        <div class="d-flex justify-space-between align-center mb-3">
+            <MudText Typo="Typo.h6" Style="font-weight:600">Estructura de cicles i cursos</MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                StartIcon="@Icons.Material.Filled.AddCircleOutline"
+                OnClick="ObrirCrearCicle">
+                Nou cicle
+            </MudButton>
+        </div>
+
         @if (_cicles.Count == 0)
         {
-            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            <MudAlert Severity="Severity.Info" Dense="true">
+                No hi ha cap cicle configurat. Crea el primer cicle per poder afegir cursos i grups.
+            </MudAlert>
         }
         else
         {
             <MudGrid>
-                @foreach (var cicle in _cicles)
+                @foreach (var cicle in _cicles.OrderBy(c => c.Ordre))
                 {
-                    <MudItem xs="12" sm="6" md="3">
-                        <MudPaper Elevation="0" Class="pa-3" Style="border:1px solid #E2E8F0;border-radius:8px">
-                            <MudText Typo="Typo.subtitle2" Style="font-weight:600;color:#003F8A">
-                                @cicle.Nom
-                            </MudText>
-                            @foreach (var curs in cicle.Cursos)
-                            {
-                                <div class="d-flex align-center gap-1 mt-1">
-                                    <MudText Typo="Typo.body2">@curs.Nom</MudText>
-                                    @if (curs.UsaModeFusteta)
+                    <MudItem xs="12" sm="6" md="4" lg="3">
+                        <MudPaper Elevation="0" Class="pa-3"
+                            Style="border:1px solid #E2E8F0;border-radius:8px;height:100%">
+                            <div class="d-flex justify-space-between align-center mb-2">
+                                <MudText Typo="Typo.subtitle2" Style="font-weight:600;color:#003F8A">
+                                    @cicle.Nom
+                                </MudText>
+                                <div class="d-flex gap-1">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                        Size="Size.Small" Color="Color.Primary"
+                                        OnClick="() => ObrirEditarCicle(cicle)"
+                                        title="Editar cicle" />
+                                    @if (cicle.Cursos.Count == 0)
                                     {
-                                        <MudChip T="string" Color="Color.Info" Size="Size.Small"
-                                            Class="ml-1" Style="height:18px;font-size:0.65rem">
-                                            Fusteta
-                                        </MudChip>
+                                        <MudIconButton Icon="@Icons.Material.Filled.DeleteForever"
+                                            Size="Size.Small" Color="Color.Error"
+                                            OnClick="() => EsborrarCicleAsync(cicle)"
+                                            title="Esborrar cicle buit" />
                                     }
                                 </div>
+                            </div>
+
+                            @foreach (var curs in cicle.Cursos.OrderBy(c => c.Ordre))
+                            {
+                                <div class="d-flex align-center justify-space-between mt-1"
+                                    Style="border-bottom:1px solid #F7FAFC;padding-bottom:4px">
+                                    <div class="d-flex align-center gap-1">
+                                        <MudText Typo="Typo.body2">@curs.Nom</MudText>
+                                        <MudText Typo="Typo.caption" Style="color:#A0AEC0">
+                                            (@curs.Codi)
+                                        </MudText>
+                                        @if (curs.UsaModeFusteta)
+                                        {
+                                            <MudChip T="string" Color="Color.Info" Size="Size.Small"
+                                                Style="height:16px;font-size:0.6rem;padding:0 4px">
+                                                F
+                                            </MudChip>
+                                        }
+                                    </div>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                        Size="Size.Small" Color="Color.Default"
+                                        OnClick="() => ObrirEditarCurs(cicle, curs)"
+                                        title="Editar curs" />
+                                </div>
                             }
+
+                            <MudButton Variant="Variant.Text" Color="Color.Primary"
+                                Size="Size.Small" Class="mt-2"
+                                StartIcon="@Icons.Material.Filled.Add"
+                                OnClick="() => ObrirCrearCurs(cicle)">
+                                Afegir curs
+                            </MudButton>
                         </MudPaper>
                     </MudItem>
                 }
@@ -195,13 +236,76 @@ else
     </DialogActions>
 </MudDialog>
 
+<!-- Dialog: Cicle (crear/editar) -->
+<MudDialog @bind-Visible="_dialogCicleObert" Options="@_dialogOptionsSmall">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            @(_editantCicle == null ? "Nou cicle" : "Editar cicle")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="_formCicleNom" Label="Nom del cicle"
+                Variant="Variant.Outlined" Required="true"
+                HelperText="Ex: Cicle Infantil, Cicle Inicial..." />
+            <MudNumericField T="int" @bind-Value="_formCicleOrdre"
+                Label="Ordre de visualització"
+                Variant="Variant.Outlined" Min="1" Max="99" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _dialogCicleObert = false" Variant="Variant.Text">Cancel·lar</MudButton>
+        <MudButton OnClick="DesarCicleAsync"
+            Variant="Variant.Filled" Color="Color.Primary"
+            Disabled="_desant">
+            @(_editantCicle == null ? "Crear cicle" : "Desar canvis")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Dialog: Curs (crear/editar) -->
+<MudDialog @bind-Visible="_dialogCursObert" Options="@_dialogOptionsSmall">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            @(_editantCurs == null ? $"Nou curs a {_cicleActualCurs?.Nom}" : "Editar curs")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="_formCursNom" Label="Nom del curs"
+                Variant="Variant.Outlined" Required="true"
+                HelperText="Ex: Infantil 3, Primer, Segon..." />
+            <MudTextField @bind-Value="_formCursCodi" Label="Codi curt"
+                Variant="Variant.Outlined"
+                HelperText="Ex: I3, 1r, 2n... (per a informes)" />
+            <MudNumericField T="int" @bind-Value="_formCursOrdre"
+                Label="Ordre dins del cicle"
+                Variant="Variant.Outlined" Min="1" Max="99" />
+            <MudSwitch @bind-Value="_formCursUsaFusteta"
+                Color="Color.Primary"
+                Label="@(_formCursUsaFusteta ? "Usa mode Fusteta Digital" : "No usa mode Fusteta")" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _dialogCursObert = false" Variant="Variant.Text">Cancel·lar</MudButton>
+        <MudButton OnClick="DesarCursAsync"
+            Variant="Variant.Filled" Color="Color.Primary"
+            Disabled="_desant">
+            @(_editantCurs == null ? "Crear curs" : "Desar canvis")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     private List<AnyAcademicModel> _anys = [];
     private List<CicleModel> _cicles = [];
     private bool _carregant = true;
     private bool _dialogObert;
+    private bool _dialogCicleObert;
+    private bool _dialogCursObert;
     private bool _desant;
 
+    // Any acadèmic
     private string _formNom = string.Empty;
     private DateTime? _formDataInici;
     private DateTime? _formDataFi;
@@ -212,6 +316,19 @@ else
     private DateTime? _formIniciT3;
     private DateTime? _formFiT3;
 
+    // Cicle
+    private CicleModel? _editantCicle;
+    private string _formCicleNom = string.Empty;
+    private int _formCicleOrdre = 1;
+
+    // Curs
+    private CicleModel? _cicleActualCurs;
+    private CursModel? _editantCurs;
+    private string _formCursNom = string.Empty;
+    private string _formCursCodi = string.Empty;
+    private int _formCursOrdre = 1;
+    private bool _formCursUsaFusteta;
+
     private readonly DialogOptions _dialogOptions = new()
     {
         MaxWidth = MaxWidth.Medium,
@@ -219,10 +336,17 @@ else
         CloseButton = true
     };
 
+    private readonly DialogOptions _dialogOptionsSmall = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseButton = true
+    };
+
     protected override async Task OnInitializedAsync()
     {
         _anys = await ConfiguracioService.GetAnysAcademicsAsync();
-        _cicles = await GrupService.GetCiclesAsync();
+        _cicles = await ConfiguracioService.GetCiclesAsync();
         _carregant = false;
     }
 
@@ -287,6 +411,171 @@ else
         else
         {
             Snackbar.Add(error ?? "Error en crear l'any acadèmic", Severity.Error);
+        }
+
+        _desant = false;
+    }
+
+    // ── Cicles ───────────────────────────────────────────────
+
+    private void ObrirCrearCicle()
+    {
+        _editantCicle = null;
+        _formCicleNom = string.Empty;
+        _formCicleOrdre = (_cicles.Count > 0 ? _cicles.Max(c => c.Ordre) : 0) + 1;
+        _dialogCicleObert = true;
+    }
+
+    private void ObrirEditarCicle(CicleModel cicle)
+    {
+        _editantCicle = cicle;
+        _formCicleNom = cicle.Nom;
+        _formCicleOrdre = cicle.Ordre;
+        _dialogCicleObert = true;
+    }
+
+    private async Task DesarCicleAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_formCicleNom))
+        {
+            Snackbar.Add("El nom del cicle és obligatori", Severity.Warning);
+            return;
+        }
+
+        _desant = true;
+
+        if (_editantCicle == null)
+        {
+            var (ok, error) = await ConfiguracioService.CrearCicleAsync(new CrearCicleModel
+            {
+                Nom = _formCicleNom,
+                Ordre = _formCicleOrdre
+            });
+
+            if (ok)
+            {
+                Snackbar.Add("Cicle creat correctament", Severity.Success);
+                _dialogCicleObert = false;
+                _cicles = await ConfiguracioService.GetCiclesAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error en crear el cicle", Severity.Error);
+            }
+        }
+        else
+        {
+            var (ok, error) = await ConfiguracioService.ActualitzarCicleAsync(_editantCicle.Id, new ActualitzarCicleModel
+            {
+                Nom = _formCicleNom,
+                Ordre = _formCicleOrdre
+            });
+
+            if (ok)
+            {
+                Snackbar.Add("Cicle actualitzat correctament", Severity.Success);
+                _dialogCicleObert = false;
+                _cicles = await ConfiguracioService.GetCiclesAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error en actualitzar el cicle", Severity.Error);
+            }
+        }
+
+        _desant = false;
+    }
+
+    private async Task EsborrarCicleAsync(CicleModel cicle)
+    {
+        var (ok, error) = await ConfiguracioService.EsborrarCicleAsync(cicle.Id);
+        if (ok)
+        {
+            Snackbar.Add("Cicle esborrat correctament", Severity.Success);
+            _cicles = await ConfiguracioService.GetCiclesAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error en esborrar el cicle", Severity.Error);
+        }
+    }
+
+    // ── Cursos ───────────────────────────────────────────────
+
+    private void ObrirCrearCurs(CicleModel cicle)
+    {
+        _cicleActualCurs = cicle;
+        _editantCurs = null;
+        _formCursNom = string.Empty;
+        _formCursCodi = string.Empty;
+        _formCursOrdre = (cicle.Cursos.Count > 0 ? cicle.Cursos.Max(c => c.Ordre) : 0) + 1;
+        _formCursUsaFusteta = false;
+        _dialogCursObert = true;
+    }
+
+    private void ObrirEditarCurs(CicleModel cicle, CursModel curs)
+    {
+        _cicleActualCurs = cicle;
+        _editantCurs = curs;
+        _formCursNom = curs.Nom;
+        _formCursCodi = curs.Codi;
+        _formCursOrdre = curs.Ordre;
+        _formCursUsaFusteta = curs.UsaModeFusteta;
+        _dialogCursObert = true;
+    }
+
+    private async Task DesarCursAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_formCursNom) || _cicleActualCurs == null)
+        {
+            Snackbar.Add("El nom del curs és obligatori", Severity.Warning);
+            return;
+        }
+
+        _desant = true;
+
+        if (_editantCurs == null)
+        {
+            var (ok, error) = await ConfiguracioService.CrearCursAsync(_cicleActualCurs.Id, new CrearCursModel
+            {
+                Nom = _formCursNom,
+                Codi = _formCursCodi,
+                Ordre = _formCursOrdre,
+                UsaModeFusteta = _formCursUsaFusteta
+            });
+
+            if (ok)
+            {
+                Snackbar.Add("Curs creat correctament", Severity.Success);
+                _dialogCursObert = false;
+                _cicles = await ConfiguracioService.GetCiclesAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error en crear el curs", Severity.Error);
+            }
+        }
+        else
+        {
+            var (ok, error) = await ConfiguracioService.ActualitzarCursAsync(
+                _cicleActualCurs.Id, _editantCurs.Id, new ActualitzarCursModel
+                {
+                    Nom = _formCursNom,
+                    Codi = _formCursCodi,
+                    Ordre = _formCursOrdre,
+                    UsaModeFusteta = _formCursUsaFusteta
+                });
+
+            if (ok)
+            {
+                Snackbar.Add("Curs actualitzat correctament", Severity.Success);
+                _dialogCursObert = false;
+                _cicles = await ConfiguracioService.GetCiclesAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error en actualitzar el curs", Severity.Error);
+            }
         }
 
         _desant = false;

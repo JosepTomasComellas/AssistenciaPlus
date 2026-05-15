@@ -51,6 +51,35 @@ public record AlumneDto
     public bool EsActiu { get; init; }
 }
 
+public record CrearCicleDto
+{
+    public string Nom { get; init; } = string.Empty;
+    public int Ordre { get; init; }
+}
+
+public record ActualitzarCicleDto
+{
+    public string Nom { get; init; } = string.Empty;
+    public int Ordre { get; init; }
+}
+
+public record CrearCursDto
+{
+    public Guid CicleId { get; init; }
+    public string Nom { get; init; } = string.Empty;
+    public string Codi { get; init; } = string.Empty;
+    public int Ordre { get; init; }
+    public bool UsaModeFusteta { get; init; }
+}
+
+public record ActualitzarCursDto
+{
+    public string Nom { get; init; } = string.Empty;
+    public string Codi { get; init; } = string.Empty;
+    public int Ordre { get; init; }
+    public bool UsaModeFusteta { get; init; }
+}
+
 public record CrearGrupDto
 {
     public Guid CursId { get; init; }

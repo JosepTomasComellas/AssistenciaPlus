@@ -283,6 +283,128 @@ public class ConfiguracioController : ControllerBase
         return Ok(ApiResponse.Ok());
     }
 
+    // ── Cicles i cursos ──────────────────────────────────────
+
+    /// <summary>Llista tots els cicles amb els seus cursos.</summary>
+    [HttpGet("cicles")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<CicleDto>>>> GetCicles(CancellationToken ct)
+    {
+        var cicles = await _grupRepo.GetCiclesAsync(ct);
+        return Ok(ApiResponse<IEnumerable<CicleDto>>.Ok(cicles.Select(MaparCicle)));
+    }
+
+    /// <summary>Crea un cicle nou.</summary>
+    [HttpPost("cicles")]
+    public async Task<ActionResult<ApiResponse<CicleDto>>> CrearCicle(
+        [FromBody] CrearCicleDto dto, CancellationToken ct)
+    {
+        var cicle = new Cicle { Nom = dto.Nom.Trim(), Ordre = dto.Ordre };
+        await _grupRepo.AfegirCicleAsync(cicle, ct);
+        await _grupRepo.SaveChangesAsync(ct);
+
+        var cicleAmbCursos = await _grupRepo.GetCiclePerIdAsync(cicle.Id, ct);
+        return CreatedAtAction(nameof(GetCicles), ApiResponse<CicleDto>.Ok(MaparCicle(cicleAmbCursos!)));
+    }
+
+    /// <summary>Actualitza el nom i ordre d'un cicle.</summary>
+    [HttpPut("cicles/{id:guid}")]
+    public async Task<ActionResult<ApiResponse>> ActualitzarCicle(
+        Guid id, [FromBody] ActualitzarCicleDto dto, CancellationToken ct)
+    {
+        var cicle = await _grupRepo.GetCiclePerIdAsync(id, ct);
+        if (cicle == null) return NotFound(ApiResponse.Fail("Cicle no trobat"));
+
+        cicle.Nom = dto.Nom.Trim();
+        cicle.Ordre = dto.Ordre;
+        await _grupRepo.ActualitzarCicleAsync(cicle, ct);
+        await _grupRepo.SaveChangesAsync(ct);
+
+        return Ok(ApiResponse.Ok());
+    }
+
+    /// <summary>Elimina un cicle sense cursos associats.</summary>
+    [HttpDelete("cicles/{id:guid}")]
+    public async Task<ActionResult<ApiResponse>> EsborrarCicle(Guid id, CancellationToken ct)
+    {
+        var cicle = await _grupRepo.GetCiclePerIdAsync(id, ct);
+        if (cicle == null) return NotFound(ApiResponse.Fail("Cicle no trobat"));
+
+        if (cicle.Cursos.Any(c => !c.IsDeleted))
+            return BadRequest(ApiResponse.Fail("No es pot esborrar un cicle amb cursos actius"));
+
+        await _grupRepo.EsborrarCicleAsync(id, ct);
+        await _grupRepo.SaveChangesAsync(ct);
+
+        return Ok(ApiResponse.Ok());
+    }
+
+    /// <summary>Crea un curs dins d'un cicle.</summary>
+    [HttpPost("cicles/{cicleId:guid}/cursos")]
+    public async Task<ActionResult<ApiResponse<CursDto>>> CrearCurs(
+        Guid cicleId, [FromBody] CrearCursDto dto, CancellationToken ct)
+    {
+        var cicle = await _grupRepo.GetCiclePerIdAsync(cicleId, ct);
+        if (cicle == null) return NotFound(ApiResponse<CursDto>.Fail("Cicle no trobat"));
+
+        var curs = new Curs
+        {
+            CicleId = cicleId,
+            Nom = dto.Nom.Trim(),
+            Codi = dto.Codi.Trim().ToUpper(),
+            Ordre = dto.Ordre,
+            UsaModeFusteta = dto.UsaModeFusteta,
+        };
+        await _grupRepo.AfegirCursAsync(curs, ct);
+        await _grupRepo.SaveChangesAsync(ct);
+
+        return CreatedAtAction(nameof(GetCicles), ApiResponse<CursDto>.Ok(new CursDto
+        {
+            Id = curs.Id,
+            CicleId = curs.CicleId,
+            Nom = curs.Nom,
+            Codi = curs.Codi,
+            Ordre = curs.Ordre,
+            UsaModeFusteta = curs.UsaModeFusteta,
+        }));
+    }
+
+    /// <summary>Actualitza les dades d'un curs.</summary>
+    [HttpPut("cicles/{cicleId:guid}/cursos/{id:guid}")]
+    public async Task<ActionResult<ApiResponse>> ActualitzarCurs(
+        Guid cicleId, Guid id, [FromBody] ActualitzarCursDto dto, CancellationToken ct)
+    {
+        var curs = await _grupRepo.GetCursPerIdAsync(id, ct);
+        if (curs == null || curs.CicleId != cicleId)
+            return NotFound(ApiResponse.Fail("Curs no trobat"));
+
+        curs.Nom = dto.Nom.Trim();
+        curs.Codi = dto.Codi.Trim().ToUpper();
+        curs.Ordre = dto.Ordre;
+        curs.UsaModeFusteta = dto.UsaModeFusteta;
+        await _grupRepo.ActualitzarCursAsync(curs, ct);
+        await _grupRepo.SaveChangesAsync(ct);
+
+        return Ok(ApiResponse.Ok());
+    }
+
+    /// <summary>Elimina un curs sense grups associats.</summary>
+    [HttpDelete("cicles/{cicleId:guid}/cursos/{id:guid}")]
+    public async Task<ActionResult<ApiResponse>> EsborrarCurs(
+        Guid cicleId, Guid id, CancellationToken ct)
+    {
+        var curs = await _grupRepo.GetCursPerIdAsync(id, ct);
+        if (curs == null || curs.CicleId != cicleId)
+            return NotFound(ApiResponse.Fail("Curs no trobat"));
+
+        if (curs.Grups.Any(g => !g.IsDeleted))
+            return BadRequest(ApiResponse.Fail("No es pot esborrar un curs amb grups actius"));
+
+        await _grupRepo.EsborrarCursAsync(id, ct);
+        await _grupRepo.SaveChangesAsync(ct);
+
+        return Ok(ApiResponse.Ok());
+    }
+
     // ── Grups ─────────────────────────────────────────────────
 
     /// <summary>Llista els grups de l'any acadèmic actiu.</summary>
@@ -355,6 +477,22 @@ public class ConfiguracioController : ControllerBase
     }
 
     // ── Helpers ─────────────────────────────────────────────
+
+    private static CicleDto MaparCicle(Cicle c) => new()
+    {
+        Id = c.Id,
+        Nom = c.Nom,
+        Ordre = c.Ordre,
+        Cursos = c.Cursos.Where(cu => !cu.IsDeleted).Select(cu => new CursDto
+        {
+            Id = cu.Id,
+            CicleId = cu.CicleId,
+            Nom = cu.Nom,
+            Codi = cu.Codi,
+            Ordre = cu.Ordre,
+            UsaModeFusteta = cu.UsaModeFusteta,
+        }).OrderBy(cu => cu.Ordre).ToList()
+    };
 
     private static GrupDto MaparGrup(Grup g) => new()
     {

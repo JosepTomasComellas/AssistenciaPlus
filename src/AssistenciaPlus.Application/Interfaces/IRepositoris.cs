@@ -24,6 +24,18 @@ public interface IGrupRepository
     Task ActualitzarAsync(Grup grup, CancellationToken ct = default);
     Task EsborrarAsync(Guid id, CancellationToken ct = default);
     Task<int> SaveChangesAsync(CancellationToken ct = default);
+
+    // Cicles
+    Task<Cicle?> GetCiclePerIdAsync(Guid id, CancellationToken ct = default);
+    Task<Cicle> AfegirCicleAsync(Cicle cicle, CancellationToken ct = default);
+    Task ActualitzarCicleAsync(Cicle cicle, CancellationToken ct = default);
+    Task EsborrarCicleAsync(Guid id, CancellationToken ct = default);
+
+    // Cursos
+    Task<Curs?> GetCursPerIdAsync(Guid id, CancellationToken ct = default);
+    Task<Curs> AfegirCursAsync(Curs curs, CancellationToken ct = default);
+    Task ActualitzarCursAsync(Curs curs, CancellationToken ct = default);
+    Task EsborrarCursAsync(Guid id, CancellationToken ct = default);
 }
 
 public interface IAssistenciaRepository

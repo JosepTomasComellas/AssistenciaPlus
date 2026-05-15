@@ -100,6 +100,34 @@ public record CrearAnyAcademicModel
     public DateOnly FiT3 { get; init; }
 }
 
+public record CrearCicleModel
+{
+    public string Nom { get; init; } = string.Empty;
+    public int Ordre { get; init; }
+}
+
+public record ActualitzarCicleModel
+{
+    public string Nom { get; init; } = string.Empty;
+    public int Ordre { get; init; }
+}
+
+public record CrearCursModel
+{
+    public string Nom { get; init; } = string.Empty;
+    public string Codi { get; init; } = string.Empty;
+    public int Ordre { get; init; }
+    public bool UsaModeFusteta { get; init; }
+}
+
+public record ActualitzarCursModel
+{
+    public string Nom { get; init; } = string.Empty;
+    public string Codi { get; init; } = string.Empty;
+    public int Ordre { get; init; }
+    public bool UsaModeFusteta { get; init; }
+}
+
 public record CrearGrupModel
 {
     public Guid CursId { get; init; }

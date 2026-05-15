@@ -34,6 +34,57 @@ public class ConfiguracioService
         return (result?.Success == true, result?.Error);
     }
 
+    // ── Cicles i cursos ──────────────────────────────────────
+
+    public async Task<List<CicleModel>> GetCiclesAsync()
+    {
+        var result = await _http.GetFromJsonAsync<ApiResponse<List<CicleModel>>>(
+            "configuracio/cicles", _opts);
+        return result?.Data ?? [];
+    }
+
+    public async Task<(bool Ok, string? Error)> CrearCicleAsync(CrearCicleModel model)
+    {
+        var response = await _http.PostAsJsonAsync("configuracio/cicles", model);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<CicleModel>>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
+    public async Task<(bool Ok, string? Error)> ActualitzarCicleAsync(Guid id, ActualitzarCicleModel model)
+    {
+        var response = await _http.PutAsJsonAsync($"configuracio/cicles/{id}", model);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
+    public async Task<(bool Ok, string? Error)> EsborrarCicleAsync(Guid id)
+    {
+        var response = await _http.DeleteAsync($"configuracio/cicles/{id}");
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
+    public async Task<(bool Ok, string? Error)> CrearCursAsync(Guid cicleId, CrearCursModel model)
+    {
+        var response = await _http.PostAsJsonAsync($"configuracio/cicles/{cicleId}/cursos", model);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<CursModel>>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
+    public async Task<(bool Ok, string? Error)> ActualitzarCursAsync(Guid cicleId, Guid id, ActualitzarCursModel model)
+    {
+        var response = await _http.PutAsJsonAsync($"configuracio/cicles/{cicleId}/cursos/{id}", model);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
+    public async Task<(bool Ok, string? Error)> EsborrarCursAsync(Guid cicleId, Guid id)
+    {
+        var response = await _http.DeleteAsync($"configuracio/cicles/{cicleId}/cursos/{id}");
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
     // ── Grups ────────────────────────────────────────────────
 
     public async Task<List<GrupModel>> GetGrupsConfiguracioAsync()
