@@ -19,7 +19,8 @@ RUN dotnet publish AssistenciaPlus.Api/AssistenciaPlus.Api.csproj \
     -c Release -o /app/publish --no-restore
 
 # ── Stage 2: Runtime ──────────────────────────────────────
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+# noble = Ubuntu 24.04 complet (apt-get disponible, adduser disponible)
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
 WORKDIR /app
 
 # Instal·lar curl per healthcheck
