@@ -40,7 +40,7 @@ public static class AppTheme
             Error = ErrorColor,
             ErrorContrastText = "#FFFFFF",
             Warning = "#F57F17",
-            WarningContrastText = "#FFFFFF",
+            WarningContrastText = "#1A2744",   // fosc sobre ambre — contrast 5:1 (WCAG AA)
             Info = "#0277BD",
             InfoContrastText = "#FFFFFF",
             Success = SuccessColor,
