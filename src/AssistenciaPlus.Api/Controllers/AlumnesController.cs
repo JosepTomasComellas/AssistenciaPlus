@@ -58,7 +58,6 @@ public class AlumnesController : ControllerBase
             Cognom1 = dto.Cognom1,
             Cognom2 = dto.Cognom2,
             DataNaixement = dto.DataNaixement,
-            EmailFamilia = dto.EmailFamilia,
             GrupId = dto.GrupId,
             OrdreFusteta = dto.OrdreFusteta,
             EsActiu = true
@@ -84,7 +83,6 @@ public class AlumnesController : ControllerBase
         alumne.Cognom1 = dto.Cognom1;
         alumne.Cognom2 = dto.Cognom2;
         alumne.DataNaixement = dto.DataNaixement;
-        alumne.EmailFamilia = dto.EmailFamilia;
         alumne.OrdreFusteta = dto.OrdreFusteta;
         alumne.EsActiu = dto.EsActiu;
 
@@ -120,7 +118,6 @@ public class AlumnesController : ControllerBase
         NomFusteta = a.NomFusteta,
         DataNaixement = a.DataNaixement,
         FotoPath = a.FotoPath,
-        EmailFamilia = a.EmailFamilia,
         GrupId = a.GrupId,
         OrdreFusteta = a.OrdreFusteta,
         EsActiu = a.EsActiu

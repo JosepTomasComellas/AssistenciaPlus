@@ -45,7 +45,7 @@ public record AlumneDto
     public string NomFusteta { get; init; } = string.Empty;
     public DateOnly? DataNaixement { get; init; }
     public string? FotoPath { get; init; }
-    public string? EmailFamilia { get; init; }
+
     public Guid GrupId { get; init; }
     public int OrdreFusteta { get; init; }
     public bool EsActiu { get; init; }
@@ -70,7 +70,7 @@ public record CrearAlumneDto
     public string Cognom1 { get; init; } = string.Empty;
     public string? Cognom2 { get; init; }
     public DateOnly? DataNaixement { get; init; }
-    public string? EmailFamilia { get; init; }
+
     public Guid GrupId { get; init; }
     public int OrdreFusteta { get; init; }
 }
@@ -81,7 +81,7 @@ public record ActualitzarAlumneDto
     public string Cognom1 { get; init; } = string.Empty;
     public string? Cognom2 { get; init; }
     public DateOnly? DataNaixement { get; init; }
-    public string? EmailFamilia { get; init; }
+
     public int OrdreFusteta { get; init; }
     public bool EsActiu { get; init; }
 }

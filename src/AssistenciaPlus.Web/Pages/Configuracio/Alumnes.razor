@@ -94,7 +94,6 @@
                     <MudTh Style="width:50px">#</MudTh>
                     <MudTh>Alumne/a</MudTh>
                     <MudTh>Data de naixement</MudTh>
-                    <MudTh>Correu família</MudTh>
                     <MudTh Style="text-align:center">Actiu</MudTh>
                     <MudTh Style="text-align:center">Accions</MudTh>
                 </HeaderContent>
@@ -125,7 +124,6 @@
                     <MudTd>
                         @(context.DataNaixement?.ToString("dd/MM/yyyy") ?? "—")
                     </MudTd>
-                    <MudTd>@(context.EmailFamilia ?? "—")</MudTd>
                     <MudTd Style="text-align:center">
                         <MudIcon
                             Icon="@(context.EsActiu ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
@@ -206,10 +204,6 @@
                     <MudTextField @bind-Value="_formCognom2" Label="Segon cognom"
                         Variant="Variant.Outlined" />
                 </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_formEmailFamilia" Label="Correu família"
-                        Variant="Variant.Outlined" InputType="InputType.Email" />
-                </MudItem>
                 <MudItem xs="12" sm="3">
                     <MudNumericField T="int" @bind-Value="_formOrdreFusteta"
                         Label="Ordre Fusteta"
@@ -257,7 +251,6 @@
     private string _formNom = string.Empty;
     private string _formCognom1 = string.Empty;
     private string? _formCognom2;
-    private string? _formEmailFamilia;
     private int _formOrdreFusteta;
     private bool _formEsActiu = true;
 
@@ -341,7 +334,6 @@
         _formNom = string.Empty;
         _formCognom1 = string.Empty;
         _formCognom2 = null;
-        _formEmailFamilia = null;
         _formOrdreFusteta = _alumnes.Count + 1;
         _formEsActiu = true;
         _dialogObert = true;
@@ -353,7 +345,6 @@
         _formNom = a.Nom;
         _formCognom1 = a.Cognom1;
         _formCognom2 = a.Cognom2;
-        _formEmailFamilia = a.EmailFamilia;
         _formOrdreFusteta = a.OrdreFusteta;
         _formEsActiu = a.EsActiu;
         _dialogObert = true;
@@ -376,7 +367,6 @@
                 Nom = _formNom,
                 Cognom1 = _formCognom1,
                 Cognom2 = _formCognom2,
-                EmailFamilia = _formEmailFamilia,
                 GrupId = _grupSeleccionat!.Value,
                 OrdreFusteta = _formOrdreFusteta
             });
@@ -401,7 +391,6 @@
                     Nom = _formNom,
                     Cognom1 = _formCognom1,
                     Cognom2 = _formCognom2,
-                    EmailFamilia = _formEmailFamilia,
                     OrdreFusteta = _formOrdreFusteta,
                     EsActiu = _formEsActiu
                 });

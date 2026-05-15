@@ -97,7 +97,6 @@ public class AppDbContext : DbContext
             e.Property(x => x.Nom).HasMaxLength(60).IsRequired();
             e.Property(x => x.Cognom1).HasMaxLength(60).IsRequired();
             e.Property(x => x.Cognom2).HasMaxLength(60);
-            e.Property(x => x.EmailFamilia).HasMaxLength(120);
             e.Ignore(x => x.NomComplet);
             e.Ignore(x => x.NomFusteta);
             e.HasOne(x => x.Grup)

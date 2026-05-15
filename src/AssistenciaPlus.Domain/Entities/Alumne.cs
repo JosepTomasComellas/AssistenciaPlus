@@ -20,9 +20,6 @@ public class Alumne : BaseEntity
     /// <summary>Ruta relativa a la foto de l'alumne (opcional)</summary>
     public string? FotoPath { get; set; }
 
-    /// <summary>Correu de contacte familiar</summary>
-    public string? EmailFamilia { get; set; }
-
     public Guid GrupId { get; set; }
     public Grup Grup { get; set; } = null!;
 
