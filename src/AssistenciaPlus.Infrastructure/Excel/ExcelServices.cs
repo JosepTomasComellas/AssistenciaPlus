@@ -106,7 +106,7 @@ public class ExcelImportService : IExcelImportService
         };
     }
 
-    private static string? GetCellValue(IXLRow row, string columnName, IXLWorksheet worksheet)
+    private static string? GetCellValue(IXLRangeRow row, string columnName, IXLWorksheet worksheet)
     {
         // Buscar la columna per nom a la primera fila
         var headerRow = worksheet.Row(1);
