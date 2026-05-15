@@ -1,5 +1,6 @@
 using AssistenciaPlus.Api.Middleware;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using AssistenciaPlus.Application.Interfaces;
@@ -227,6 +228,18 @@ try
     }
 
     // ── Pipeline ──────────────────────────────────────────────
+    // ── Fitxers estàtics (fotos pujades) ─────────────────────
+    var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
+    Directory.CreateDirectory(Path.Combine(uploadsPath, "alumnes"));
+    Directory.CreateDirectory(Path.Combine(uploadsPath, "usuaris"));
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(uploadsPath),
+        RequestPath = "/uploads",
+        OnPrepareResponse = ctx =>
+            ctx.Context.Response.Headers.Append("Cache-Control", "public,max-age=86400")
+    });
+
     app.UseSerilogRequestLogging();
 
     if (app.Environment.IsDevelopment())

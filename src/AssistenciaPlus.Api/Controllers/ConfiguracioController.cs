@@ -22,7 +22,11 @@ public class ConfiguracioController : ControllerBase
     private readonly IUsuariRepository _usuariRepo;
     private readonly IEmailService _emailService;
     private readonly IConfiguration _config;
+    private readonly IWebHostEnvironment _env;
     private readonly ILogger<ConfiguracioController> _logger;
+
+    private static readonly string[] _mimesAcceptats = ["image/jpeg", "image/png", "image/webp"];
+    private const long MidaMaxima = 2 * 1024 * 1024;
 
     public ConfiguracioController(
         ICalendariRepository calendariRepo,
@@ -30,6 +34,7 @@ public class ConfiguracioController : ControllerBase
         IUsuariRepository usuariRepo,
         IEmailService emailService,
         IConfiguration config,
+        IWebHostEnvironment env,
         ILogger<ConfiguracioController> logger)
     {
         _calendariRepo = calendariRepo;
@@ -37,6 +42,7 @@ public class ConfiguracioController : ControllerBase
         _usuariRepo = usuariRepo;
         _emailService = emailService;
         _config = config;
+        _env = env;
         _logger = logger;
     }
 
@@ -212,6 +218,48 @@ public class ConfiguracioController : ControllerBase
         await _usuariRepo.SaveChangesAsync(ct);
 
         return Ok(ApiResponse.Ok());
+    }
+
+    /// <summary>Puja o substitueix la foto de perfil d'un usuari.</summary>
+    [HttpPut("usuaris/{id:guid}/foto")]
+    [RequestSizeLimit(2 * 1024 * 1024 + 4096)]
+    public async Task<ActionResult<ApiResponse<string>>> PujarFotoUsuari(
+        Guid id, IFormFile foto, CancellationToken ct)
+    {
+        if (foto is null || foto.Length == 0)
+            return BadRequest(ApiResponse<string>.Fail("Cal seleccionar una imatge"));
+
+        if (foto.Length > MidaMaxima)
+            return BadRequest(ApiResponse<string>.Fail("La imatge no pot superar els 2 MB"));
+
+        if (!_mimesAcceptats.Contains(foto.ContentType.ToLower()))
+            return BadRequest(ApiResponse<string>.Fail("Format no acceptat. Usa JPEG, PNG o WebP"));
+
+        var usuari = await _usuariRepo.GetByIdAsync(id, ct);
+        if (usuari == null) return NotFound(ApiResponse<string>.Fail("Usuari no trobat"));
+
+        var ext = foto.ContentType.ToLower() switch
+        {
+            "image/png" => ".png",
+            "image/webp" => ".webp",
+            _ => ".jpg"
+        };
+
+        var dirFotos = Path.Combine(_env.ContentRootPath, "uploads", "usuaris");
+        Directory.CreateDirectory(dirFotos);
+
+        foreach (var antic in Directory.GetFiles(dirFotos, $"{id}.*"))
+            System.IO.File.Delete(antic);
+
+        var nomFitxer = $"{id}{ext}";
+        await using (var stream = System.IO.File.Create(Path.Combine(dirFotos, nomFitxer)))
+            await foto.CopyToAsync(stream, ct);
+
+        usuari.FotoPath = $"/uploads/usuaris/{nomFitxer}";
+        await _usuariRepo.ActualitzarAsync(usuari, ct);
+        await _usuariRepo.SaveChangesAsync(ct);
+
+        return Ok(ApiResponse<string>.Ok(usuari.FotoPath));
     }
 
     /// <summary>Reenvia les credencials d'accés a un usuari per correu.</summary>

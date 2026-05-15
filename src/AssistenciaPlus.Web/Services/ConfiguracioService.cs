@@ -1,4 +1,5 @@
 using AssistenciaPlus.Web.Models;
+using Microsoft.AspNetCore.Components.Forms;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -150,5 +151,18 @@ public class ConfiguracioService
         var response = await _http.PostAsync($"configuracio/usuaris/{id}/enviar-credencials", null);
         var result = await response.Content.ReadFromJsonAsync<ApiResponse>(_opts);
         return (result?.Success == true, result?.Error);
+    }
+
+    public async Task<(bool Ok, string? FotoPath, string? Error)> PujarFotoUsuariAsync(
+        Guid id, IBrowserFile fitxer)
+    {
+        using var content = new MultipartFormDataContent();
+        var streamContent = new StreamContent(fitxer.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024));
+        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(fitxer.ContentType);
+        content.Add(streamContent, "foto", fitxer.Name);
+
+        var response = await _http.PutAsync($"configuracio/usuaris/{id}/foto", content);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<string>>(_opts);
+        return (result?.Success == true, result?.Data, result?.Error);
     }
 }

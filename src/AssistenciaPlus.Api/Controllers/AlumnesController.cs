@@ -15,11 +15,16 @@ public class AlumnesController : BaseApiController
 {
     private readonly IAlumneRepository _alumneRepo;
     private readonly IGrupRepository _grupRepo;
+    private readonly IWebHostEnvironment _env;
 
-    public AlumnesController(IAlumneRepository alumneRepo, IGrupRepository grupRepo)
+    private static readonly string[] _mimesAcceptats = ["image/jpeg", "image/png", "image/webp"];
+    private const long MidaMaxima = 2 * 1024 * 1024; // 2 MB
+
+    public AlumnesController(IAlumneRepository alumneRepo, IGrupRepository grupRepo, IWebHostEnvironment env)
     {
         _alumneRepo = alumneRepo;
         _grupRepo = grupRepo;
+        _env = env;
     }
 
     /// <summary>Llista els alumnes d'un grup.</summary>
@@ -114,6 +119,49 @@ public class AlumnesController : BaseApiController
         await _alumneRepo.SaveChangesAsync(ct);
 
         return Ok(ApiResponse.Ok());
+    }
+
+    /// <summary>Puja o substitueix la foto d'un alumne. Requereix rol Equip Directiu.</summary>
+    [HttpPut("{id:guid}/foto")]
+    [Authorize(Policy = "NomesEquipDirectiu")]
+    [RequestSizeLimit(2 * 1024 * 1024 + 4096)]
+    public async Task<ActionResult<ApiResponse<string>>> PujarFotoAlumne(
+        Guid id, IFormFile foto, CancellationToken ct)
+    {
+        if (foto is null || foto.Length == 0)
+            return BadRequest(ApiResponse<string>.Fail("Cal seleccionar una imatge"));
+
+        if (foto.Length > MidaMaxima)
+            return BadRequest(ApiResponse<string>.Fail("La imatge no pot superar els 2 MB"));
+
+        if (!_mimesAcceptats.Contains(foto.ContentType.ToLower()))
+            return BadRequest(ApiResponse<string>.Fail("Format no acceptat. Usa JPEG, PNG o WebP"));
+
+        var alumne = await _alumneRepo.GetByIdAsync(id, ct);
+        if (alumne == null) return NotFound(ApiResponse<string>.Fail("Alumne no trobat"));
+
+        var ext = foto.ContentType.ToLower() switch
+        {
+            "image/png" => ".png",
+            "image/webp" => ".webp",
+            _ => ".jpg"
+        };
+
+        var dirFotos = Path.Combine(_env.ContentRootPath, "uploads", "alumnes");
+        Directory.CreateDirectory(dirFotos);
+
+        foreach (var antic in Directory.GetFiles(dirFotos, $"{id}.*"))
+            System.IO.File.Delete(antic);
+
+        var nomFitxer = $"{id}{ext}";
+        await using (var stream = System.IO.File.Create(Path.Combine(dirFotos, nomFitxer)))
+            await foto.CopyToAsync(stream, ct);
+
+        alumne.FotoPath = $"/uploads/alumnes/{nomFitxer}";
+        await _alumneRepo.ActualitzarAsync(alumne, ct);
+        await _alumneRepo.SaveChangesAsync(ct);
+
+        return Ok(ApiResponse<string>.Ok(alumne.FotoPath));
     }
 
     // ── Helpers ─────────────────────────────────────────────

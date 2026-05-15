@@ -4,6 +4,7 @@
 @inject AlumnesService AlumnesService
 @inject ConfiguracioService ConfiguracioService
 @inject ISnackbar Snackbar
+@using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>Alumnes i grups — Configuració</PageTitle>
 
@@ -105,10 +106,17 @@
                     </MudTd>
                     <MudTd>
                         <div class="d-flex align-center gap-2">
-                            <MudAvatar Color="Color.Primary" Size="Size.Small"
-                                Style="font-size:0.75rem;font-weight:700">
-                                @context.Inicials
-                            </MudAvatar>
+                            @if (!string.IsNullOrEmpty(context.FotoPath))
+                            {
+                                <MudAvatar Size="Size.Small" Image="@context.FotoPath" />
+                            }
+                            else
+                            {
+                                <MudAvatar Color="Color.Primary" Size="Size.Small"
+                                    Style="font-size:0.75rem;font-weight:700">
+                                    @context.Inicials
+                                </MudAvatar>
+                            }
                             <div>
                                 <MudText Style="font-weight:500">@context.NomComplet</MudText>
                                 @if (!string.IsNullOrEmpty(context.NomFusteta) &&
@@ -234,6 +242,45 @@
                             Color="Color.Primary"
                             Label="@(_formEsActiu ? "Actiu" : "Inactiu")" />
                     </MudItem>
+                    <MudItem xs="12">
+                        <MudDivider Class="my-1" />
+                        <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color:#4A5568">
+                            Foto de l'alumne/a
+                        </MudText>
+                        <div class="d-flex align-center gap-3">
+                            @if (!string.IsNullOrEmpty(_editantAlumne.FotoPath))
+                            {
+                                <MudAvatar Size="Size.Large" Image="@_editantAlumne.FotoPath"
+                                    Style="width:64px;height:64px" />
+                            }
+                            else
+                            {
+                                <MudAvatar Color="Color.Primary" Size="Size.Large"
+                                    Style="width:64px;height:64px;font-size:1.25rem;font-weight:700">
+                                    @_editantAlumne.Inicials
+                                </MudAvatar>
+                            }
+                            <div>
+                                <InputFile id="inputFotoAlumne" OnChange="PujarFotoAlumneAsync"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    style="display:none" />
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                                    StartIcon="@Icons.Material.Filled.PhotoCamera"
+                                    OnClick="@(() => { })"
+                                    HtmlTag="label" for="inputFotoAlumne"
+                                    Disabled="_pujantFoto">
+                                    @if (_pujantFoto)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                                    }
+                                    Canviar foto
+                                </MudButton>
+                                <MudText Typo="Typo.caption" Style="color:#A0AEC0;display:block;margin-top:4px">
+                                    JPEG, PNG o WebP · màx. 2 MB
+                                </MudText>
+                            </div>
+                        </div>
+                    </MudItem>
                 }
             </MudGrid>
         </MudStack>
@@ -264,6 +311,7 @@
     // Confirmació
     private MudMessageBox? _confirmBox;
     private string _confirmMissatge = string.Empty;
+    private bool _pujantFoto;
 
     // Formulari grup
     private Guid _formGrupCursId = Guid.Empty;
@@ -382,6 +430,25 @@
         _formOrdreFusteta = a.OrdreFusteta;
         _formEsActiu = a.EsActiu;
         _dialogObert = true;
+    }
+
+    private async Task PujarFotoAlumneAsync(InputFileChangeEventArgs e)
+    {
+        if (_editantAlumne == null) return;
+        _pujantFoto = true;
+        var (ok, fotoPath, error) = await AlumnesService.PujarFotoAlumneAsync(_editantAlumne.Id, e.File);
+        if (ok && fotoPath != null)
+        {
+            _editantAlumne = _editantAlumne with { FotoPath = fotoPath };
+            var idx = _alumnes.FindIndex(a => a.Id == _editantAlumne.Id);
+            if (idx >= 0) _alumnes[idx] = _editantAlumne;
+            Snackbar.Add("Foto actualitzada correctament", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error al pujar la foto", Severity.Error);
+        }
+        _pujantFoto = false;
     }
 
     private async Task DesarAlumneAsync()
