@@ -1,5 +1,5 @@
 # ── Stage 1: Build ────────────────────────────────────────
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copiar fitxers de projecte per aprofitar la caché de NuGet
@@ -19,7 +19,7 @@ RUN dotnet publish AssistenciaPlus.Api/AssistenciaPlus.Api.csproj \
     -c Release -o /app/publish --no-restore
 
 # ── Stage 2: Runtime ──────────────────────────────────────
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
 # Instal·lar curl per healthcheck

@@ -18,6 +18,20 @@ Segueix [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.3.0] - 2026-05-15
+
+### Canviat (Migració tecnològica)
+- **Totes les capes**: migrat de .NET 8 a **.NET 10** (LTS) amb **C# 14** per defecte
+- **MudBlazor**: actualitzat de 6.19.0 a **9.4.0** (afegit `MudPopoverProvider`, `MudChip<T>`)
+- **EF Core + Npgsql**: 8.0.0 → 10.0.0
+- **JWT Bearer**: 8.0.0 → 10.0.0
+- **Serilog**: actualitzat a versions compatibles amb .NET 10
+- **Swashbuckle**: 6.5.0 → 8.1.0
+- **Docker**: imatges base `sdk:10.0` i `aspnet:10.0`
+- **ClosedXML**: 0.102.1 → 0.104.1
+
+---
+
 ## [0.2.0] - 2026-05-15
 
 ### Afegit (Sprint 2 — Capa d'API REST)
