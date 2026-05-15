@@ -30,6 +30,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Alumne>().HasQueryFilter(a => !a.IsDeleted);
         modelBuilder.Entity<Usuari>().HasQueryFilter(u => !u.IsDeleted);
         modelBuilder.Entity<Grup>().HasQueryFilter(g => !g.IsDeleted);
+        // Filtres coherents per entitats dependents (evita WRN EF Core)
+        modelBuilder.Entity<AssistenciaAlumne>().HasQueryFilter(aa => !aa.Alumne.IsDeleted);
+        modelBuilder.Entity<RegistreAssistencia>().HasQueryFilter(r => !r.Grup.IsDeleted);
 
         // ── AnyAcademic ────────────────────────────────────
         modelBuilder.Entity<AnyAcademic>(e =>

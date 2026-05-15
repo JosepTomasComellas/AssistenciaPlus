@@ -1,4 +1,5 @@
 using AssistenciaPlus.Api.Middleware;
+using Microsoft.AspNetCore.DataProtection;
 using AssistenciaPlus.Application.Interfaces;
 using AssistenciaPlus.Application.Services;
 using AssistenciaPlus.Core.Interfaces;
@@ -56,9 +57,14 @@ try
     var redisConn = builder.Configuration["Redis:ConnectionString"]
         ?? throw new InvalidOperationException("Redis connection string no configurada");
 
-    builder.Services.AddSingleton<IConnectionMultiplexer>(
-        ConnectionMultiplexer.Connect(redisConn));
+    var redisMultiplexer = ConnectionMultiplexer.Connect(redisConn);
+    builder.Services.AddSingleton<IConnectionMultiplexer>(redisMultiplexer);
     builder.Services.AddScoped<ICacheService, RedisCacheService>();
+
+    // Persistir claus DataProtection a Redis — evita invalidar sessions en redeploy
+    builder.Services.AddDataProtection()
+        .PersistKeysToStackExchangeRedis(redisMultiplexer, "AssistenciaPlus-DataProtection-Keys")
+        .SetApplicationName("AssistenciaPlus");
 
     builder.Services.AddStackExchangeRedisCache(options =>
         options.Configuration = redisConn);
