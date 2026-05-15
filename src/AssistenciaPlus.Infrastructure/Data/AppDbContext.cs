@@ -30,6 +30,8 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Alumne>().HasQueryFilter(a => !a.IsDeleted);
         modelBuilder.Entity<Usuari>().HasQueryFilter(u => !u.IsDeleted);
         modelBuilder.Entity<Grup>().HasQueryFilter(g => !g.IsDeleted);
+        modelBuilder.Entity<Cicle>().HasQueryFilter(c => !c.IsDeleted);
+        modelBuilder.Entity<Curs>().HasQueryFilter(cu => !cu.IsDeleted);
         // Filtres coherents per entitats dependents (evita WRN EF Core)
         modelBuilder.Entity<AssistenciaAlumne>().HasQueryFilter(aa => !aa.Alumne.IsDeleted);
         modelBuilder.Entity<RegistreAssistencia>().HasQueryFilter(r => !r.Grup.IsDeleted);
@@ -118,6 +120,7 @@ public class AppDbContext : DbContext
         {
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.GrupId, x.FranjaHorariaId, x.Data }).IsUnique();
+            e.HasIndex(x => new { x.GrupId, x.Data });
             e.HasOne(x => x.Grup)
              .WithMany(x => x.RegistresAssistencia)
              .HasForeignKey(x => x.GrupId)

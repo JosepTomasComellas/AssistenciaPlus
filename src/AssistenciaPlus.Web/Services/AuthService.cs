@@ -60,9 +60,9 @@ public class AuthService
             _authProvider.NotifyStateChanged();
             return (true, null);
         }
-        catch (Exception ex)
+        catch
         {
-            return (false, $"Error de connexió: {ex.Message}");
+            return (false, "No s'ha pogut connectar amb el servidor. Comprova la connexió i torna-ho a intentar.");
         }
     }
 

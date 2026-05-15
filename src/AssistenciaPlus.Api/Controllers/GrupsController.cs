@@ -11,7 +11,7 @@ namespace AssistenciaPlus.Api.Controllers;
 [ApiController]
 [Route("api/grups")]
 [Authorize]
-public class GrupsController : ControllerBase
+public class GrupsController : BaseApiController
 {
     private readonly IGrupRepository _grupRepo;
     private readonly ICalendariRepository _calendariRepo;
@@ -42,7 +42,7 @@ public class GrupsController : ControllerBase
         }
         else
         {
-            var mestreId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var mestreId = GetCurrentUserId();
             grups = await _grupRepo.GetPerMestreAsync(mestreId, anyActiu.Id, ct);
         }
 

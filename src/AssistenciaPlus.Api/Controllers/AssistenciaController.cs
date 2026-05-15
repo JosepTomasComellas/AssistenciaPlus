@@ -12,7 +12,7 @@ namespace AssistenciaPlus.Api.Controllers;
 [ApiController]
 [Route("api/assistencia")]
 [Authorize]
-public class AssistenciaController : ControllerBase
+public class AssistenciaController : BaseApiController
 {
     private readonly IAssistenciaService _assistenciaService;
     private readonly IAssistenciaRepository _assistenciaRepo;
@@ -67,7 +67,7 @@ public class AssistenciaController : ControllerBase
     public async Task<ActionResult<ApiResponse<RegistreAssistenciaDto>>> DesarSessio(
         [FromBody] DesarSessioDto dto, CancellationToken ct)
     {
-        var mestreId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var mestreId = GetCurrentUserId();
         var rol = User.FindFirst(ClaimTypes.Role)?.Value;
 
         if (rol == nameof(RolUsuari.Administratiu))
@@ -94,7 +94,7 @@ public class AssistenciaController : ControllerBase
     public async Task<ActionResult<ApiResponse>> AplicarAbsenciaParcial(
         [FromBody] AplicarAbsenciaParcialDto dto, CancellationToken ct)
     {
-        var mestreId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var mestreId = GetCurrentUserId();
         var rol = User.FindFirst(ClaimTypes.Role)?.Value;
 
         if (rol == nameof(RolUsuari.Administratiu))

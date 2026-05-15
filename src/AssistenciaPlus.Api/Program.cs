@@ -1,5 +1,7 @@
 using AssistenciaPlus.Api.Middleware;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using AssistenciaPlus.Application.Interfaces;
 using AssistenciaPlus.Application.Services;
 using AssistenciaPlus.Core.Interfaces;
@@ -186,11 +188,23 @@ try
                     builder.Configuration["App:PublicUrl"] ?? "https://localhost",
                     "https://localhost:7001"
                 )
-                .AllowAnyMethod()
-                .AllowAnyHeader()
+                .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .WithHeaders("Authorization", "Content-Type", "X-Requested-With")
                 .AllowCredentials()
         )
     );
+
+    // ── Rate limiting (brute force login) ─────────────────────
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.AddFixedWindowLimiter("login", opt =>
+        {
+            opt.PermitLimit = 10;
+            opt.Window = TimeSpan.FromMinutes(1);
+            opt.QueueLimit = 0;
+        });
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    });
 
     // ── SignalR ───────────────────────────────────────────────
     builder.Services.AddSignalR();
@@ -223,6 +237,7 @@ try
 
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseCors();
+    app.UseRateLimiter();
     app.UseSession();
     app.UseAuthentication();
     app.UseAuthorization();

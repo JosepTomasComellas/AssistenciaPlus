@@ -4,6 +4,7 @@ using AssistenciaPlus.Application.Interfaces;
 using AssistenciaPlus.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -13,7 +14,7 @@ namespace AssistenciaPlus.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController : ControllerBase
+public class AuthController : BaseApiController
 {
     private readonly IUsuariRepository _usuariRepo;
     private readonly IConfiguration _config;
@@ -32,6 +33,7 @@ public class AuthController : ControllerBase
     /// <summary>Autenticació. Retorna un token JWT.</summary>
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("login")]
     public async Task<ActionResult<ApiResponse<LoginResponseDto>>> Login(
         [FromBody] LoginRequestDto dto, CancellationToken ct)
     {
@@ -66,7 +68,7 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<ApiResponse>> CanviContrasenya(
         [FromBody] CanviContrasenyaDto dto, CancellationToken ct)
     {
-        var usuariId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var usuariId = GetCurrentUserId();
         var usuari = await _usuariRepo.GetByIdAsync(usuariId, ct);
         if (usuari == null) return NotFound(ApiResponse.Fail("Usuari no trobat"));
 
@@ -85,7 +87,7 @@ public class AuthController : ControllerBase
     [Authorize]
     public async Task<ActionResult<ApiResponse<UsuariDto>>> GetUsuariActual(CancellationToken ct)
     {
-        var usuariId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var usuariId = GetCurrentUserId();
         var usuari = await _usuariRepo.GetByIdAsync(usuariId, ct);
         if (usuari == null) return NotFound(ApiResponse<UsuariDto>.Fail("Usuari no trobat"));
 

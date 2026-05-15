@@ -4,13 +4,14 @@ using AssistenciaPlus.Application.Interfaces;
 using AssistenciaPlus.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace AssistenciaPlus.Api.Controllers;
 
 [ApiController]
 [Route("api/alumnes")]
 [Authorize]
-public class AlumnesController : ControllerBase
+public class AlumnesController : BaseApiController
 {
     private readonly IAlumneRepository _alumneRepo;
     private readonly IGrupRepository _grupRepo;
@@ -28,6 +29,15 @@ public class AlumnesController : ControllerBase
     {
         if (grupId == Guid.Empty)
             return BadRequest(ApiResponse<IEnumerable<AlumneDto>>.Fail("Cal indicar el grupId"));
+
+        var rol = User.FindFirst(ClaimTypes.Role)?.Value;
+        if (rol == nameof(RolUsuari.Mestre))
+        {
+            var mestreId = GetCurrentUserId();
+            var grup = await _grupRepo.GetByIdAsync(grupId, ct);
+            if (grup?.TutorId != mestreId)
+                return Forbid();
+        }
 
         var alumnes = await _alumneRepo.GetPerGrupAsync(grupId, ct);
         return Ok(ApiResponse<IEnumerable<AlumneDto>>.Ok(alumnes.Select(MaparAlumne)));

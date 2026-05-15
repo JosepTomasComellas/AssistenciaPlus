@@ -171,7 +171,7 @@ public class ConfiguracioController : ControllerBase
         await _emailService.SendWelcomeEmailAsync(
             usuari.Email, usuari.NomComplet, contrasenyaTemporal, urlApp, ct);
 
-        _logger.LogInformation("Usuari creat: {Email} ({Rol})", usuari.Email, usuari.Rol);
+        _logger.LogInformation("Usuari creat amb rol {Rol}", usuari.Rol);
 
         return CreatedAtAction(nameof(GetUsuaris), ApiResponse<UsuariDto>.Ok(MaparUsuari(usuari)));
     }
@@ -544,8 +544,8 @@ public class ConfiguracioController : ControllerBase
     private static string GenerarContrasenyaTemporal()
     {
         const string chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#";
-        var random = new Random();
-        return new string(Enumerable.Repeat(chars, 12)
-            .Select(s => s[random.Next(s.Length)]).ToArray());
+        var buffer = new byte[12];
+        System.Security.Cryptography.RandomNumberGenerator.Fill(buffer);
+        return new string(buffer.Select(b => chars[b % chars.Length]).ToArray());
     }
 }

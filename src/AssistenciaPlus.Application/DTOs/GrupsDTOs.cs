@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace AssistenciaPlus.Application.DTOs;
 
 public record CicleDto
@@ -95,12 +97,21 @@ public record ActualitzarGrupDto
 
 public record CrearAlumneDto
 {
+    [Required][StringLength(60, MinimumLength = 1)]
     public string Nom { get; init; } = string.Empty;
+
+    [Required][StringLength(60, MinimumLength = 1)]
     public string Cognom1 { get; init; } = string.Empty;
+
+    [StringLength(60)]
     public string? Cognom2 { get; init; }
+
     public DateOnly? DataNaixement { get; init; }
 
+    [Required]
     public Guid GrupId { get; init; }
+
+    [Range(0, 999)]
     public int OrdreFusteta { get; init; }
 }
 
@@ -143,28 +154,54 @@ public record UsuariDto
 
 public record CrearUsuariDto
 {
+    [Required][StringLength(60, MinimumLength = 1)]
     public string Nom { get; init; } = string.Empty;
+
+    [Required][StringLength(60, MinimumLength = 1)]
     public string Cognom1 { get; init; } = string.Empty;
+
+    [StringLength(60)]
     public string? Cognom2 { get; init; }
+
+    [Required][EmailAddress][StringLength(120)]
     public string Email { get; init; } = string.Empty;
+
+    [Required][RegularExpression("Mestre|EquipDirectiu|Administratiu")]
     public string Rol { get; init; } = "Mestre";
+
+    [Required][RegularExpression("ca|es")]
     public string Idioma { get; init; } = "ca";
 }
 
 public record ActualitzarUsuariDto
 {
+    [Required][StringLength(60, MinimumLength = 1)]
     public string Nom { get; init; } = string.Empty;
+
+    [Required][StringLength(60, MinimumLength = 1)]
     public string Cognom1 { get; init; } = string.Empty;
+
+    [StringLength(60)]
     public string? Cognom2 { get; init; }
+
+    [Required][EmailAddress][StringLength(120)]
     public string Email { get; init; } = string.Empty;
+
+    [Required][RegularExpression("Mestre|EquipDirectiu|Administratiu")]
     public string Rol { get; init; } = "Mestre";
+
+    [Required][RegularExpression("ca|es")]
     public string Idioma { get; init; } = "ca";
+
     public bool EsActiu { get; init; }
 }
 
 public record LoginRequestDto
 {
+    [Required][EmailAddress][StringLength(120)]
     public string Email { get; init; } = string.Empty;
+
+    [Required][StringLength(100, MinimumLength = 6)]
     public string Contrasenya { get; init; } = string.Empty;
 }
 
@@ -177,6 +214,9 @@ public record LoginResponseDto
 
 public record CanviContrasenyaDto
 {
+    [Required][StringLength(100, MinimumLength = 1)]
     public string ContrasenyaActual { get; init; } = string.Empty;
+
+    [Required][StringLength(100, MinimumLength = 8)]
     public string ContrasenyaNova { get; init; } = string.Empty;
 }
