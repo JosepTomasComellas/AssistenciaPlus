@@ -9,8 +9,11 @@ cd "$DEPLOY_PATH"
 echo "→ Obtenint canvis..."
 git pull origin main
 
-echo "→ Reconstruint i reiniciant serveis..."
+echo "→ Assegurant que tots els serveis estan en marxa..."
 docker compose up -d --build api web
+
+echo "→ Iniciant serveis auxiliars si no estan en marxa..."
+docker compose up -d nginx ollama
 
 echo "→ Netejant imatges antigues..."
 docker image prune -f
