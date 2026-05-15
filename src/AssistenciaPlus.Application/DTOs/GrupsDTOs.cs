@@ -51,6 +51,19 @@ public record AlumneDto
     public bool EsActiu { get; init; }
 }
 
+public record CrearGrupDto
+{
+    public Guid CursId { get; init; }
+    public string Lletra { get; init; } = string.Empty;
+    public Guid? TutorId { get; init; }
+}
+
+public record ActualitzarGrupDto
+{
+    public string Lletra { get; init; } = string.Empty;
+    public Guid? TutorId { get; init; }
+}
+
 public record CrearAlumneDto
 {
     public string Nom { get; init; } = string.Empty;

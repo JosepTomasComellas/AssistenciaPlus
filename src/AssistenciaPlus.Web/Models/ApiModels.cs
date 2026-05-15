@@ -71,6 +71,48 @@ public record CanviContrasenyaModel
     public string ContrasenyaNova { get; init; } = string.Empty;
 }
 
+// ── Any acadèmic ───────────────────────────────────────────
+public record AnyAcademicModel
+{
+    public Guid Id { get; init; }
+    public string Nom { get; init; } = string.Empty;
+    public DateOnly DataInici { get; init; }
+    public DateOnly DataFi { get; init; }
+    public bool EsActiu { get; init; }
+    public DateOnly IniciFT1 { get; init; }
+    public DateOnly FiT1 { get; init; }
+    public DateOnly IniciFT2 { get; init; }
+    public DateOnly FiT2 { get; init; }
+    public DateOnly IniciFT3 { get; init; }
+    public DateOnly FiT3 { get; init; }
+}
+
+public record CrearAnyAcademicModel
+{
+    public string Nom { get; init; } = string.Empty;
+    public DateOnly DataInici { get; init; }
+    public DateOnly DataFi { get; init; }
+    public DateOnly IniciT1 { get; init; }
+    public DateOnly FiT1 { get; init; }
+    public DateOnly IniciT2 { get; init; }
+    public DateOnly FiT2 { get; init; }
+    public DateOnly IniciT3 { get; init; }
+    public DateOnly FiT3 { get; init; }
+}
+
+public record CrearGrupModel
+{
+    public Guid CursId { get; init; }
+    public string Lletra { get; init; } = string.Empty;
+    public Guid? TutorId { get; init; }
+}
+
+public record ActualitzarGrupModel
+{
+    public string Lletra { get; init; } = string.Empty;
+    public Guid? TutorId { get; init; }
+}
+
 // ── Grups i cursos ─────────────────────────────────────────
 public record GrupModel
 {

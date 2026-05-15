@@ -39,3 +39,16 @@ public record ConfigurarDiesDto
     public Guid AnyAcademicId { get; init; }
     public List<ActualitzarDiaCalendariDto> Dies { get; init; } = [];
 }
+
+public record CrearAnyAcademicDto
+{
+    public string Nom { get; init; } = string.Empty;
+    public DateOnly DataInici { get; init; }
+    public DateOnly DataFi { get; init; }
+    public DateOnly IniciT1 { get; init; }
+    public DateOnly FiT1 { get; init; }
+    public DateOnly IniciT2 { get; init; }
+    public DateOnly FiT2 { get; init; }
+    public DateOnly IniciT3 { get; init; }
+    public DateOnly FiT3 { get; init; }
+}

@@ -2,6 +2,7 @@
 @attribute [Authorize(Roles = "EquipDirectiu")]
 @inject GrupService GrupService
 @inject AlumnesService AlumnesService
+@inject ConfiguracioService ConfiguracioService
 @inject ISnackbar Snackbar
 
 <PageTitle>Alumnes i grups — Configuració</PageTitle>
@@ -13,36 +14,71 @@
     </MudText>
 </div>
 
-<!-- Selecció de grup -->
+<!-- Gestió de grups -->
 <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-radius:12px">
-    <MudGrid AlignItems="AlignItems.Center">
-        <MudItem xs="12" sm="6" md="4">
-            <MudSelect T="Guid?"
-                Value="_grupSeleccionat"
-                ValueChanged="GrupCanviatAsync"
-                Label="Selecciona el grup"
-                Variant="Variant.Outlined">
-                <MudSelectItem Value="@((Guid?)null)">— Selecciona un grup —</MudSelectItem>
-                @foreach (var grup in _grups)
-                {
-                    <MudSelectItem Value="@((Guid?)grup.Id)">
-                        @grup.NomComplet (@grup.CursCodi)
-                    </MudSelectItem>
-                }
-            </MudSelect>
-        </MudItem>
-        @if (_grupSeleccionat.HasValue)
-        {
-            <MudItem xs="12" sm="6" md="4">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                    StartIcon="@Icons.Material.Filled.PersonAdd"
-                    OnClick="ObrirCrearAlumne">
-                    Afegir alumne
-                </MudButton>
-            </MudItem>
-        }
-    </MudGrid>
+    <div class="d-flex justify-space-between align-center mb-3">
+        <MudText Typo="Typo.subtitle1" Style="font-weight:600">Grups actuals</MudText>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+            StartIcon="@Icons.Material.Filled.CreateNewFolder"
+            OnClick="ObrirCrearGrup">
+            Nou grup
+        </MudButton>
+    </div>
+
+    @if (_grups.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true">
+            No hi ha cap grup. Crea el primer grup per poder afegir alumnes.
+        </MudAlert>
+    }
+    else
+    {
+        <MudChipSet T="Guid?" SelectionMode="SelectionMode.SingleSelection"
+            SelectedValue="_grupSeleccionat"
+            SelectedValueChanged="GrupCanviatAsync"
+            Class="flex-wrap gap-2">
+            @foreach (var g in _grups.OrderBy(g => g.CicleNom).ThenBy(g => g.CursNom).ThenBy(g => g.Lletra))
+            {
+                <MudChip T="Guid?" Value="@((Guid?)g.Id)"
+                    Color="@(_grupSeleccionat == g.Id ? Color.Primary : Color.Default)"
+                    Variant="@(_grupSeleccionat == g.Id ? Variant.Filled : Variant.Outlined)"
+                    Icon="@Icons.Material.Filled.Group">
+                    @g.NomComplet
+                    <MudText Typo="Typo.caption" Class="ml-1" Style="opacity:0.75">
+                        (@g.NombreAlumnes al.)
+                    </MudText>
+                </MudChip>
+            }
+        </MudChipSet>
+    }
 </MudPaper>
+
+<!-- Accions del grup seleccionat -->
+@if (_grupSeleccionat.HasValue)
+{
+    var grupActual = _grups.FirstOrDefault(g => g.Id == _grupSeleccionat);
+    <MudPaper Elevation="0" Class="pa-3 mb-3"
+        Style="border:1px solid #E2E8F0;border-radius:10px;background:#F7FAFC">
+        <div class="d-flex align-center gap-3 flex-wrap">
+            <MudText Typo="Typo.subtitle2" Style="font-weight:600">
+                Grup: @grupActual?.NomComplet (@grupActual?.CicleNom)
+            </MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                StartIcon="@Icons.Material.Filled.PersonAdd"
+                OnClick="ObrirCrearAlumne">
+                Afegir alumne
+            </MudButton>
+            @if (grupActual?.NombreAlumnes == 0)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.DeleteForever"
+                    Color="Color.Error" Size="Size.Small"
+                    OnClick="() => EsborrarGrupAsync(grupActual!.Id)"
+                    title="Esborrar grup buit" />
+            }
+        </div>
+    </MudPaper>
+}
 
 @if (_grupSeleccionat.HasValue)
 {
@@ -112,6 +148,42 @@
     }
 }
 
+<!-- Dialog crear grup -->
+<MudDialog @bind-Visible="_dialogGrupObert" Options="@_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Nou grup</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudSelect T="Guid" @bind-Value="_formGrupCursId" Label="Curs"
+                Variant="Variant.Outlined" Required="true">
+                @foreach (var cicle in _cicles)
+                {
+                    <MudSelectItem Value="@Guid.Empty" Disabled="true">
+                        ── @cicle.Nom ──
+                    </MudSelectItem>
+                    @foreach (var curs in cicle.Cursos)
+                    {
+                        <MudSelectItem Value="@curs.Id">@curs.Nom</MudSelectItem>
+                    }
+                }
+            </MudSelect>
+            <MudTextField @bind-Value="_formGrupLletra"
+                Label="Lletra del grup (A, B... o buit per a infantil)"
+                Variant="Variant.Outlined"
+                HelperText="Deixa buit si el curs té un sol grup" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _dialogGrupObert = false" Variant="Variant.Text">Cancel·lar</MudButton>
+        <MudButton OnClick="DesarGrupAsync"
+            Variant="Variant.Filled" Color="Color.Primary"
+            Disabled="_desant">
+            Crear grup
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 <!-- Dialog crear/editar alumne -->
 <MudDialog @bind-Visible="_dialogObert" Options="@_dialogOptions">
     <TitleContent>
@@ -168,13 +240,20 @@
 
 @code {
     private List<GrupModel> _grups = [];
+    private List<CicleModel> _cicles = [];
     private List<AlumneModel> _alumnes = [];
     private Guid? _grupSeleccionat;
     private bool _carregantAlumnes;
     private bool _dialogObert;
+    private bool _dialogGrupObert;
     private bool _desant;
     private AlumneModel? _editantAlumne;
 
+    // Formulari grup
+    private Guid _formGrupCursId = Guid.Empty;
+    private string _formGrupLletra = string.Empty;
+
+    // Formulari alumne
     private string _formNom = string.Empty;
     private string _formCognom1 = string.Empty;
     private string? _formCognom2;
@@ -191,7 +270,59 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _grups = await GrupService.GetGrupsAsync();
+        _grups = await ConfiguracioService.GetGrupsConfiguracioAsync();
+        _cicles = await GrupService.GetCiclesAsync();
+    }
+
+    private void ObrirCrearGrup()
+    {
+        _formGrupCursId = Guid.Empty;
+        _formGrupLletra = string.Empty;
+        _dialogGrupObert = true;
+    }
+
+    private async Task DesarGrupAsync()
+    {
+        if (_formGrupCursId == Guid.Empty)
+        {
+            Snackbar.Add("Selecciona un curs", Severity.Warning);
+            return;
+        }
+
+        _desant = true;
+        var (ok, error) = await ConfiguracioService.CrearGrupAsync(new CrearGrupModel
+        {
+            CursId = _formGrupCursId,
+            Lletra = _formGrupLletra.Trim()
+        });
+
+        if (ok)
+        {
+            Snackbar.Add("Grup creat correctament", Severity.Success);
+            _dialogGrupObert = false;
+            _grups = await ConfiguracioService.GetGrupsConfiguracioAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error al crear el grup", Severity.Error);
+        }
+        _desant = false;
+    }
+
+    private async Task EsborrarGrupAsync(Guid id)
+    {
+        var (ok, error) = await ConfiguracioService.EsborrarGrupAsync(id);
+        if (ok)
+        {
+            Snackbar.Add("Grup esborrat correctament", Severity.Success);
+            _grupSeleccionat = null;
+            _alumnes = [];
+            _grups = await ConfiguracioService.GetGrupsConfiguracioAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error al esborrar el grup", Severity.Error);
+        }
     }
 
     private async Task GrupCanviatAsync(Guid? grupId)

@@ -113,6 +113,31 @@ public class GrupRepository : IGrupRepository
             .Include(c => c.Cursos)
             .OrderBy(c => c.Ordre)
             .ToListAsync(ct);
+
+    public async Task<Grup> AfegirAsync(Grup grup, CancellationToken ct = default)
+    {
+        await _ctx.Grups.AddAsync(grup, ct);
+        return grup;
+    }
+
+    public Task ActualitzarAsync(Grup grup, CancellationToken ct = default)
+    {
+        _ctx.Entry(grup).State = EntityState.Modified;
+        return Task.CompletedTask;
+    }
+
+    public async Task EsborrarAsync(Guid id, CancellationToken ct = default)
+    {
+        var grup = await _ctx.Grups.FindAsync(new object[] { id }, ct);
+        if (grup != null)
+        {
+            grup.IsDeleted = true;
+            _ctx.Entry(grup).State = EntityState.Modified;
+        }
+    }
+
+    public Task<int> SaveChangesAsync(CancellationToken ct = default)
+        => _ctx.SaveChangesAsync(ct);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -287,6 +312,18 @@ public class CalendariRepository : ICalendariRepository
     public Task ActualitzarDiaAsync(DiaCalendari dia, CancellationToken ct = default)
     {
         _ctx.Entry(dia).State = EntityState.Modified;
+        return Task.CompletedTask;
+    }
+
+    public async Task<AnyAcademic> AfegirAnyAcademicAsync(AnyAcademic any, CancellationToken ct = default)
+    {
+        await _ctx.AnysAcademics.AddAsync(any, ct);
+        return any;
+    }
+
+    public Task ActualitzarAnyAcademicAsync(AnyAcademic any, CancellationToken ct = default)
+    {
+        _ctx.Entry(any).State = EntityState.Modified;
         return Task.CompletedTask;
     }
 

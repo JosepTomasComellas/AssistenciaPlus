@@ -18,6 +18,7 @@ namespace AssistenciaPlus.Api.Controllers;
 public class ConfiguracioController : ControllerBase
 {
     private readonly ICalendariRepository _calendariRepo;
+    private readonly IGrupRepository _grupRepo;
     private readonly IUsuariRepository _usuariRepo;
     private readonly IEmailService _emailService;
     private readonly IConfiguration _config;
@@ -25,12 +26,14 @@ public class ConfiguracioController : ControllerBase
 
     public ConfiguracioController(
         ICalendariRepository calendariRepo,
+        IGrupRepository grupRepo,
         IUsuariRepository usuariRepo,
         IEmailService emailService,
         IConfiguration config,
         ILogger<ConfiguracioController> logger)
     {
         _calendariRepo = calendariRepo;
+        _grupRepo = grupRepo;
         _usuariRepo = usuariRepo;
         _emailService = emailService;
         _config = config;
@@ -230,7 +233,145 @@ public class ConfiguracioController : ControllerBase
         return Ok(ApiResponse.Ok());
     }
 
+    // ── Anys acadèmics (crear / activar) ─────────────────────
+
+    /// <summary>Crea un any acadèmic nou (inactiu per defecte).</summary>
+    [HttpPost("anys-academics")]
+    public async Task<ActionResult<ApiResponse<AnyAcademicDto>>> CrearAnyAcademic(
+        [FromBody] CrearAnyAcademicDto dto, CancellationToken ct)
+    {
+        var any = new AnyAcademic
+        {
+            Nom = dto.Nom,
+            DataInici = dto.DataInici,
+            DataFi = dto.DataFi,
+            EsActiu = false,
+            IniciT1 = dto.IniciT1,
+            FiT1 = dto.FiT1,
+            IniciT2 = dto.IniciT2,
+            FiT2 = dto.FiT2,
+            IniciT3 = dto.IniciT3,
+            FiT3 = dto.FiT3,
+        };
+
+        await _calendariRepo.AfegirAnyAcademicAsync(any, ct);
+        await _calendariRepo.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Any acadèmic creat: {Nom}", any.Nom);
+        return CreatedAtAction(nameof(GetAnysAcademics), ApiResponse<AnyAcademicDto>.Ok(MaparAnyAcademic(any)));
+    }
+
+    /// <summary>Activa un any acadèmic i desactiva la resta.</summary>
+    [HttpPost("anys-academics/{id:guid}/activar")]
+    public async Task<ActionResult<ApiResponse>> ActivarAnyAcademic(Guid id, CancellationToken ct)
+    {
+        var any = await _calendariRepo.GetAnyAcademicPerIdAsync(id, ct);
+        if (any == null) return NotFound(ApiResponse.Fail("Any acadèmic no trobat"));
+
+        var tots = await _calendariRepo.GetAnysAcademicsAsync(ct);
+        foreach (var a in tots.Where(a => a.EsActiu))
+        {
+            a.EsActiu = false;
+            await _calendariRepo.ActualitzarAnyAcademicAsync(a, ct);
+        }
+
+        any.EsActiu = true;
+        await _calendariRepo.ActualitzarAnyAcademicAsync(any, ct);
+        await _calendariRepo.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Any acadèmic activat: {Nom}", any.Nom);
+        return Ok(ApiResponse.Ok());
+    }
+
+    // ── Grups ─────────────────────────────────────────────────
+
+    /// <summary>Llista els grups de l'any acadèmic actiu.</summary>
+    [HttpGet("grups")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<GrupDto>>>> GetGrups(CancellationToken ct)
+    {
+        var anyActiu = await _calendariRepo.GetAnyAcademicActiuAsync(ct);
+        if (anyActiu == null)
+            return Ok(ApiResponse<IEnumerable<GrupDto>>.Ok([]));
+
+        var grups = await _grupRepo.GetPerAnyAcademicAsync(anyActiu.Id, ct);
+        return Ok(ApiResponse<IEnumerable<GrupDto>>.Ok(grups.Select(MaparGrup)));
+    }
+
+    /// <summary>Crea un grup nou per a l'any acadèmic actiu.</summary>
+    [HttpPost("grups")]
+    public async Task<ActionResult<ApiResponse<GrupDto>>> CrearGrup(
+        [FromBody] CrearGrupDto dto, CancellationToken ct)
+    {
+        var anyActiu = await _calendariRepo.GetAnyAcademicActiuAsync(ct);
+        if (anyActiu == null)
+            return BadRequest(ApiResponse<GrupDto>.Fail("No hi ha cap any acadèmic actiu"));
+
+        var grup = new Grup
+        {
+            CursId = dto.CursId,
+            Lletra = dto.Lletra.ToUpper(),
+            AnyAcademicId = anyActiu.Id,
+            TutorId = dto.TutorId,
+        };
+
+        await _grupRepo.AfegirAsync(grup, ct);
+        await _grupRepo.SaveChangesAsync(ct);
+
+        var grupAmbDetalls = await _grupRepo.GetByIdAmbDetallsAsync(grup.Id, ct);
+        _logger.LogInformation("Grup creat: {Nom} ({AnyAcademic})", grup.Lletra, anyActiu.Nom);
+        return CreatedAtAction(nameof(GetGrups), ApiResponse<GrupDto>.Ok(MaparGrup(grupAmbDetalls!)));
+    }
+
+    /// <summary>Actualitza la lletra o el tutor d'un grup.</summary>
+    [HttpPut("grups/{id:guid}")]
+    public async Task<ActionResult<ApiResponse>> ActualitzarGrup(
+        Guid id, [FromBody] ActualitzarGrupDto dto, CancellationToken ct)
+    {
+        var grup = await _grupRepo.GetByIdAsync(id, ct);
+        if (grup == null) return NotFound(ApiResponse.Fail("Grup no trobat"));
+
+        grup.Lletra = dto.Lletra.ToUpper();
+        grup.TutorId = dto.TutorId;
+        await _grupRepo.ActualitzarAsync(grup, ct);
+        await _grupRepo.SaveChangesAsync(ct);
+
+        return Ok(ApiResponse.Ok());
+    }
+
+    /// <summary>Elimina (soft delete) un grup sense alumnes actius.</summary>
+    [HttpDelete("grups/{id:guid}")]
+    public async Task<ActionResult<ApiResponse>> EsborrarGrup(Guid id, CancellationToken ct)
+    {
+        var grup = await _grupRepo.GetByIdAmbDetallsAsync(id, ct);
+        if (grup == null) return NotFound(ApiResponse.Fail("Grup no trobat"));
+
+        if (grup.Alumnes?.Any(a => a.EsActiu) == true)
+            return BadRequest(ApiResponse.Fail("No es pot esborrar un grup amb alumnes actius"));
+
+        await _grupRepo.EsborrarAsync(id, ct);
+        await _grupRepo.SaveChangesAsync(ct);
+
+        return Ok(ApiResponse.Ok());
+    }
+
     // ── Helpers ─────────────────────────────────────────────
+
+    private static GrupDto MaparGrup(Grup g) => new()
+    {
+        Id = g.Id,
+        Lletra = g.Lletra,
+        NomComplet = g.NomComplet,
+        CursId = g.CursId,
+        CursNom = g.Curs?.Nom ?? string.Empty,
+        CursCodi = g.Curs?.Codi ?? string.Empty,
+        UsaModeFusteta = g.Curs?.UsaModeFusteta ?? false,
+        CicleId = g.Curs?.CicleId ?? Guid.Empty,
+        CicleNom = g.Curs?.Cicle?.Nom ?? string.Empty,
+        AnyAcademicId = g.AnyAcademicId,
+        TutorId = g.TutorId,
+        TutorNomComplet = g.Tutor?.NomComplet,
+        NombreAlumnes = g.Alumnes?.Count(a => a.EsActiu) ?? 0
+    };
 
     private static AnyAcademicDto MaparAnyAcademic(AnyAcademic a) => new()
     {

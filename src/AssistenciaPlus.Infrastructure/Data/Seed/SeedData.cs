@@ -14,6 +14,7 @@ public static class SeedData
         await SeedCiclesICursosAsync(context);
         await SeedFranjesHorariesAsync(context);
         await SeedAdminUsuariAsync(context);
+        await SeedAnyAcademicAsync(context);
 
         await context.SaveChangesAsync();
     }
@@ -147,6 +148,29 @@ public static class SeedData
         };
 
         await context.FranjesHoraries.AddRangeAsync(franjes);
+    }
+
+    // ── Any Acadèmic 2025-2026 ─────────────────────────────────────────
+    private static async Task SeedAnyAcademicAsync(AppDbContext context)
+    {
+        if (await context.AnysAcademics.AnyAsync()) return;
+
+        var anyAcademic = new AnyAcademic
+        {
+            Id = Guid.Parse("40000000-0000-0000-0000-000000000001"),
+            Nom = "2025-2026",
+            DataInici = new DateOnly(2025, 9, 9),
+            DataFi = new DateOnly(2026, 6, 19),
+            EsActiu = true,
+            IniciT1 = new DateOnly(2025, 9, 9),
+            FiT1 = new DateOnly(2025, 12, 19),
+            IniciT2 = new DateOnly(2026, 1, 8),
+            FiT2 = new DateOnly(2026, 3, 27),
+            IniciT3 = new DateOnly(2026, 4, 14),
+            FiT3 = new DateOnly(2026, 6, 19),
+        };
+
+        await context.AnysAcademics.AddAsync(anyAcademic);
     }
 
     // ── Usuari Admin inicial ───────────────────────────────────────────

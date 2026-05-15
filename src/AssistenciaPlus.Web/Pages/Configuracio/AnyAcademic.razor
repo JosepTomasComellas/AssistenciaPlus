@@ -1,39 +1,294 @@
 @page "/configuracio/any-academic"
 @attribute [Authorize(Roles = "EquipDirectiu")]
+@inject ConfiguracioService ConfiguracioService
+@inject GrupService GrupService
+@inject ISnackbar Snackbar
 
 <PageTitle>Any acadèmic — Configuració</PageTitle>
 
 <div class="mb-5">
     <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">Any acadèmic</MudText>
     <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
-        Configuració del calendari escolar
+        Gestió dels anys acadèmics i trimestres
     </MudText>
 </div>
 
-<MudAlert Severity="Severity.Info" Class="mb-4">
-    La gestió de l'any acadèmic i el calendari escolar es configura directament a la base de dades
-    o mitjançant l'API. En properes versions s'afegirà la gestió visual aquí.
-</MudAlert>
+@if (_carregant)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+}
+else
+{
+    <!-- Anys acadèmics existents -->
+    <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-radius:12px">
+        <div class="d-flex justify-space-between align-center mb-3">
+            <MudText Typo="Typo.h6" Style="font-weight:600">Anys acadèmics</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                StartIcon="@Icons.Material.Filled.Add"
+                OnClick="ObrirCrearAnyAcademic">
+                Nou any acadèmic
+            </MudButton>
+        </div>
 
-<MudPaper Elevation="1" Class="pa-6" Style="border-radius:12px">
-    <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight:600">
-        Estructura de cicles i cursos
-    </MudText>
-    <MudText Typo="Typo.body2" Style="color:#718096">
-        L'escola té la següent estructura configurada:
-    </MudText>
-    <MudList T="string" Dense="false" Class="mt-3">
-        <MudListItem T="string" Icon="@Icons.Material.Filled.School">
-            <strong>Educació Infantil (P3, P4, P5)</strong> — Mode Fusteta Digital activat
-        </MudListItem>
-        <MudListItem T="string" Icon="@Icons.Material.Filled.School">
-            <strong>1r Cicle de Primària (1r i 2n)</strong> — Mode Fusteta Digital activat
-        </MudListItem>
-        <MudListItem T="string" Icon="@Icons.Material.Filled.School">
-            <strong>2n Cicle de Primària (3r i 4t)</strong> — Mode llista clàssic
-        </MudListItem>
-        <MudListItem T="string" Icon="@Icons.Material.Filled.School">
-            <strong>3r Cicle de Primària (5è i 6è)</strong> — Mode llista clàssic
-        </MudListItem>
-    </MudList>
-</MudPaper>
+        @if (_anys.Count == 0)
+        {
+            <MudAlert Severity="Severity.Warning">
+                No hi ha cap any acadèmic configurat. Crea el primer any acadèmic per poder gestionar grups i alumnes.
+            </MudAlert>
+        }
+        else
+        {
+            <MudTable Items="_anys" Hover="true" Dense="false">
+                <HeaderContent>
+                    <MudTh>Any acadèmic</MudTh>
+                    <MudTh>Inici</MudTh>
+                    <MudTh>Fi</MudTh>
+                    <MudTh>1r Trimestre</MudTh>
+                    <MudTh>2n Trimestre</MudTh>
+                    <MudTh>3r Trimestre</MudTh>
+                    <MudTh Style="text-align:center">Estat</MudTh>
+                    <MudTh Style="text-align:center">Acció</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudText Style="@(context.EsActiu ? "font-weight:700" : "font-weight:400")">
+                            @context.Nom
+                        </MudText>
+                    </MudTd>
+                    <MudTd>@context.DataInici.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd>@context.DataFi.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd>
+                        <MudText Typo="Typo.caption">
+                            @context.IniciFT1.ToString("dd/MM") – @context.FiT1.ToString("dd/MM/yyyy")
+                        </MudText>
+                    </MudTd>
+                    <MudTd>
+                        <MudText Typo="Typo.caption">
+                            @context.IniciFT2.ToString("dd/MM") – @context.FiT2.ToString("dd/MM/yyyy")
+                        </MudText>
+                    </MudTd>
+                    <MudTd>
+                        <MudText Typo="Typo.caption">
+                            @context.IniciFT3.ToString("dd/MM") – @context.FiT3.ToString("dd/MM/yyyy")
+                        </MudText>
+                    </MudTd>
+                    <MudTd Style="text-align:center">
+                        @if (context.EsActiu)
+                        {
+                            <MudChip T="string" Color="Color.Success" Size="Size.Small">Actiu</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Color="Color.Default" Size="Size.Small">Inactiu</MudChip>
+                        }
+                    </MudTd>
+                    <MudTd Style="text-align:center">
+                        @if (!context.EsActiu)
+                        {
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                Size="Size.Small"
+                                OnClick="() => ActivarAnyAcademicAsync(context.Id)">
+                                Activar
+                            </MudButton>
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
+
+    <!-- Estructura de cicles (informativa) -->
+    <MudPaper Elevation="1" Class="pa-4" Style="border-radius:12px">
+        <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight:600">
+            Estructura de cicles i cursos
+        </MudText>
+        @if (_cicles.Count == 0)
+        {
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+        }
+        else
+        {
+            <MudGrid>
+                @foreach (var cicle in _cicles)
+                {
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="0" Class="pa-3" Style="border:1px solid #E2E8F0;border-radius:8px">
+                            <MudText Typo="Typo.subtitle2" Style="font-weight:600;color:#003F8A">
+                                @cicle.Nom
+                            </MudText>
+                            @foreach (var curs in cicle.Cursos)
+                            {
+                                <div class="d-flex align-center gap-1 mt-1">
+                                    <MudText Typo="Typo.body2">@curs.Nom</MudText>
+                                    @if (curs.UsaModeFusteta)
+                                    {
+                                        <MudChip T="string" Color="Color.Info" Size="Size.Small"
+                                            Class="ml-1" Style="height:18px;font-size:0.65rem">
+                                            Fusteta
+                                        </MudChip>
+                                    }
+                                </div>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    </MudPaper>
+}
+
+<!-- Dialog: Nou any acadèmic -->
+<MudDialog @bind-Visible="_dialogObert" Options="@_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Nou any acadèmic</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="_formNom" Label="Nom (ex: 2026-2027)"
+                Variant="Variant.Outlined" Required="true" />
+            <MudGrid>
+                <MudItem xs="6">
+                    <MudDatePicker @bind-Date="_formDataInici" Label="Data d'inici"
+                        Variant="Variant.Outlined" DateFormat="dd/MM/yyyy" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudDatePicker @bind-Date="_formDataFi" Label="Data de fi"
+                        Variant="Variant.Outlined" DateFormat="dd/MM/yyyy" />
+                </MudItem>
+            </MudGrid>
+            <MudText Typo="Typo.subtitle2" Style="font-weight:600;margin-top:8px">Trimestres</MudText>
+            <MudGrid>
+                <MudItem xs="6">
+                    <MudDatePicker @bind-Date="_formIniciT1" Label="Inici 1r trimestre"
+                        Variant="Variant.Outlined" DateFormat="dd/MM/yyyy" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudDatePicker @bind-Date="_formFiT1" Label="Fi 1r trimestre"
+                        Variant="Variant.Outlined" DateFormat="dd/MM/yyyy" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudDatePicker @bind-Date="_formIniciT2" Label="Inici 2n trimestre"
+                        Variant="Variant.Outlined" DateFormat="dd/MM/yyyy" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudDatePicker @bind-Date="_formFiT2" Label="Fi 2n trimestre"
+                        Variant="Variant.Outlined" DateFormat="dd/MM/yyyy" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudDatePicker @bind-Date="_formIniciT3" Label="Inici 3r trimestre"
+                        Variant="Variant.Outlined" DateFormat="dd/MM/yyyy" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudDatePicker @bind-Date="_formFiT3" Label="Fi 3r trimestre"
+                        Variant="Variant.Outlined" DateFormat="dd/MM/yyyy" />
+                </MudItem>
+            </MudGrid>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _dialogObert = false" Variant="Variant.Text">Cancel·lar</MudButton>
+        <MudButton OnClick="DesarAnyAcademicAsync"
+            Variant="Variant.Filled" Color="Color.Primary"
+            Disabled="_desant">
+            Crear any acadèmic
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<AnyAcademicModel> _anys = [];
+    private List<CicleModel> _cicles = [];
+    private bool _carregant = true;
+    private bool _dialogObert;
+    private bool _desant;
+
+    private string _formNom = string.Empty;
+    private DateTime? _formDataInici;
+    private DateTime? _formDataFi;
+    private DateTime? _formIniciT1;
+    private DateTime? _formFiT1;
+    private DateTime? _formIniciT2;
+    private DateTime? _formFiT2;
+    private DateTime? _formIniciT3;
+    private DateTime? _formFiT3;
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true,
+        CloseButton = true
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _anys = await ConfiguracioService.GetAnysAcademicsAsync();
+        _cicles = await GrupService.GetCiclesAsync();
+        _carregant = false;
+    }
+
+    private void ObrirCrearAnyAcademic()
+    {
+        _formNom = string.Empty;
+        _formDataInici = new DateTime(DateTime.Today.Year, 9, 8);
+        _formDataFi = new DateTime(DateTime.Today.Year + 1, 6, 20);
+        _formIniciT1 = new DateTime(DateTime.Today.Year, 9, 8);
+        _formFiT1 = new DateTime(DateTime.Today.Year, 12, 20);
+        _formIniciT2 = new DateTime(DateTime.Today.Year + 1, 1, 8);
+        _formFiT2 = new DateTime(DateTime.Today.Year + 1, 3, 28);
+        _formIniciT3 = new DateTime(DateTime.Today.Year + 1, 4, 14);
+        _formFiT3 = new DateTime(DateTime.Today.Year + 1, 6, 20);
+        _dialogObert = true;
+    }
+
+    private async Task ActivarAnyAcademicAsync(Guid id)
+    {
+        var (ok, error) = await ConfiguracioService.ActivarAnyAcademicAsync(id);
+        if (ok)
+        {
+            Snackbar.Add("Any acadèmic activat correctament", Severity.Success);
+            _anys = await ConfiguracioService.GetAnysAcademicsAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error en activar l'any acadèmic", Severity.Error);
+        }
+    }
+
+    private async Task DesarAnyAcademicAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_formNom) || _formDataInici == null || _formDataFi == null)
+        {
+            Snackbar.Add("El nom i les dates són obligatoris", Severity.Warning);
+            return;
+        }
+
+        _desant = true;
+
+        var model = new CrearAnyAcademicModel
+        {
+            Nom = _formNom,
+            DataInici = DateOnly.FromDateTime(_formDataInici!.Value),
+            DataFi = DateOnly.FromDateTime(_formDataFi!.Value),
+            IniciT1 = DateOnly.FromDateTime(_formIniciT1 ?? _formDataInici!.Value),
+            FiT1 = DateOnly.FromDateTime(_formFiT1 ?? _formDataFi!.Value),
+            IniciT2 = DateOnly.FromDateTime(_formIniciT2 ?? _formDataInici!.Value),
+            FiT2 = DateOnly.FromDateTime(_formFiT2 ?? _formDataFi!.Value),
+            IniciT3 = DateOnly.FromDateTime(_formIniciT3 ?? _formDataInici!.Value),
+            FiT3 = DateOnly.FromDateTime(_formFiT3 ?? _formDataFi!.Value),
+        };
+
+        var (ok, error) = await ConfiguracioService.CrearAnyAcademicAsync(model);
+        if (ok)
+        {
+            Snackbar.Add("Any acadèmic creat correctament", Severity.Success);
+            _dialogObert = false;
+            _anys = await ConfiguracioService.GetAnysAcademicsAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error en crear l'any acadèmic", Severity.Error);
+        }
+
+        _desant = false;
+    }
+}

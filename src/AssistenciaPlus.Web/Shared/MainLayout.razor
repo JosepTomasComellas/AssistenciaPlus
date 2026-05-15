@@ -2,11 +2,6 @@
 @inject AuthService AuthService
 @inject NavigationManager Nav
 
-<MudThemeProvider Theme="@_theme" />
-<MudPopoverProvider />
-<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small" />
-<MudSnackbarProvider />
-
 <AuthorizeView>
     <Authorized>
         <MudLayout>
@@ -91,7 +86,6 @@
 </AuthorizeView>
 
 @code {
-    private readonly MudTheme _theme = AppTheme.Create();
     private bool _drawerOpen = true;
 
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;

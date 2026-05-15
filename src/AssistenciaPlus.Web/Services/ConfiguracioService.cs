@@ -11,6 +11,59 @@ public class ConfiguracioService
 
     public ConfiguracioService(HttpClient http) => _http = http;
 
+    // ── Anys acadèmics ───────────────────────────────────────
+
+    public async Task<List<AnyAcademicModel>> GetAnysAcademicsAsync()
+    {
+        var result = await _http.GetFromJsonAsync<ApiResponse<List<AnyAcademicModel>>>(
+            "configuracio/anys-academics", _opts);
+        return result?.Data ?? [];
+    }
+
+    public async Task<(bool Ok, string? Error)> CrearAnyAcademicAsync(CrearAnyAcademicModel model)
+    {
+        var response = await _http.PostAsJsonAsync("configuracio/anys-academics", model);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<AnyAcademicModel>>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
+    public async Task<(bool Ok, string? Error)> ActivarAnyAcademicAsync(Guid id)
+    {
+        var response = await _http.PostAsync($"configuracio/anys-academics/{id}/activar", null);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
+    // ── Grups ────────────────────────────────────────────────
+
+    public async Task<List<GrupModel>> GetGrupsConfiguracioAsync()
+    {
+        var result = await _http.GetFromJsonAsync<ApiResponse<List<GrupModel>>>(
+            "configuracio/grups", _opts);
+        return result?.Data ?? [];
+    }
+
+    public async Task<(bool Ok, string? Error)> CrearGrupAsync(CrearGrupModel model)
+    {
+        var response = await _http.PostAsJsonAsync("configuracio/grups", model);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<GrupModel>>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
+    public async Task<(bool Ok, string? Error)> ActualitzarGrupAsync(Guid id, ActualitzarGrupModel model)
+    {
+        var response = await _http.PutAsJsonAsync($"configuracio/grups/{id}", model);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
+    public async Task<(bool Ok, string? Error)> EsborrarGrupAsync(Guid id)
+    {
+        var response = await _http.DeleteAsync($"configuracio/grups/{id}");
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
     // ── Usuaris ──────────────────────────────────────────────
 
     public async Task<List<UsuariModel>> GetUsuarisAsync()

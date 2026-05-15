@@ -20,6 +20,10 @@ public interface IGrupRepository
     Task<IReadOnlyList<Grup>> GetPerAnyAcademicAsync(Guid anyAcademicId, CancellationToken ct = default);
     Task<IReadOnlyList<Grup>> GetPerCicleAsync(Guid cicleId, Guid anyAcademicId, CancellationToken ct = default);
     Task<IReadOnlyList<Cicle>> GetCiclesAsync(CancellationToken ct = default);
+    Task<Grup> AfegirAsync(Grup grup, CancellationToken ct = default);
+    Task ActualitzarAsync(Grup grup, CancellationToken ct = default);
+    Task EsborrarAsync(Guid id, CancellationToken ct = default);
+    Task<int> SaveChangesAsync(CancellationToken ct = default);
 }
 
 public interface IAssistenciaRepository
@@ -56,5 +60,7 @@ public interface ICalendariRepository
     Task<IReadOnlyList<FranjaHoraria>> GetFranjesAsync(CancellationToken ct = default);
     Task AfegirDiesAsync(IEnumerable<DiaCalendari> dies, CancellationToken ct = default);
     Task ActualitzarDiaAsync(DiaCalendari dia, CancellationToken ct = default);
+    Task<AnyAcademic> AfegirAnyAcademicAsync(AnyAcademic any, CancellationToken ct = default);
+    Task ActualitzarAnyAcademicAsync(AnyAcademic any, CancellationToken ct = default);
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 }

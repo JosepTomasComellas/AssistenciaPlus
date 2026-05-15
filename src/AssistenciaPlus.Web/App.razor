@@ -1,5 +1,10 @@
 @inject AuthService AuthService
 
+<MudThemeProvider Theme="@AppTheme.Create()" />
+<MudPopoverProvider />
+<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small" />
+<MudSnackbarProvider />
+
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
