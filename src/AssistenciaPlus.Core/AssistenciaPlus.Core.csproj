@@ -1,0 +1,9 @@
+<!-- AssistenciaPlus.Core.csproj -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>AssistenciaPlus.Core</RootNamespace>
+  </PropertyGroup>
+</Project>

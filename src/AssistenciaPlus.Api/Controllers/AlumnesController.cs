@@ -1,0 +1,128 @@
+using AssistenciaPlus.Application.Common;
+using AssistenciaPlus.Application.DTOs;
+using AssistenciaPlus.Application.Interfaces;
+using AssistenciaPlus.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace AssistenciaPlus.Api.Controllers;
+
+[ApiController]
+[Route("api/alumnes")]
+[Authorize]
+public class AlumnesController : ControllerBase
+{
+    private readonly IAlumneRepository _alumneRepo;
+    private readonly IGrupRepository _grupRepo;
+
+    public AlumnesController(IAlumneRepository alumneRepo, IGrupRepository grupRepo)
+    {
+        _alumneRepo = alumneRepo;
+        _grupRepo = grupRepo;
+    }
+
+    /// <summary>Llista els alumnes d'un grup.</summary>
+    [HttpGet]
+    public async Task<ActionResult<ApiResponse<IEnumerable<AlumneDto>>>> GetAlumnes(
+        [FromQuery] Guid grupId, CancellationToken ct)
+    {
+        if (grupId == Guid.Empty)
+            return BadRequest(ApiResponse<IEnumerable<AlumneDto>>.Fail("Cal indicar el grupId"));
+
+        var alumnes = await _alumneRepo.GetPerGrupAsync(grupId, ct);
+        return Ok(ApiResponse<IEnumerable<AlumneDto>>.Ok(alumnes.Select(MaparAlumne)));
+    }
+
+    /// <summary>Detall d'un alumne.</summary>
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<ApiResponse<AlumneDto>>> GetAlumne(Guid id, CancellationToken ct)
+    {
+        var alumne = await _alumneRepo.GetByIdAsync(id, ct);
+        if (alumne == null) return NotFound(ApiResponse<AlumneDto>.Fail("Alumne no trobat"));
+        return Ok(ApiResponse<AlumneDto>.Ok(MaparAlumne(alumne)));
+    }
+
+    /// <summary>Crea un alumne nou. Requereix rol Equip Directiu.</summary>
+    [HttpPost]
+    [Authorize(Policy = "NomesEquipDirectiu")]
+    public async Task<ActionResult<ApiResponse<AlumneDto>>> CrearAlumne(
+        [FromBody] CrearAlumneDto dto, CancellationToken ct)
+    {
+        var grup = await _grupRepo.GetByIdAsync(dto.GrupId, ct);
+        if (grup == null)
+            return NotFound(ApiResponse<AlumneDto>.Fail("Grup no trobat"));
+
+        var alumne = new Alumne
+        {
+            Nom = dto.Nom,
+            Cognom1 = dto.Cognom1,
+            Cognom2 = dto.Cognom2,
+            DataNaixement = dto.DataNaixement,
+            EmailFamilia = dto.EmailFamilia,
+            GrupId = dto.GrupId,
+            OrdreFusteta = dto.OrdreFusteta,
+            EsActiu = true
+        };
+
+        await _alumneRepo.AfegirAsync(alumne, ct);
+        await _alumneRepo.SaveChangesAsync(ct);
+
+        return CreatedAtAction(nameof(GetAlumne), new { id = alumne.Id },
+            ApiResponse<AlumneDto>.Ok(MaparAlumne(alumne)));
+    }
+
+    /// <summary>Actualitza un alumne. Requereix rol Equip Directiu.</summary>
+    [HttpPut("{id:guid}")]
+    [Authorize(Policy = "NomesEquipDirectiu")]
+    public async Task<ActionResult<ApiResponse>> ActualitzarAlumne(
+        Guid id, [FromBody] ActualitzarAlumneDto dto, CancellationToken ct)
+    {
+        var alumne = await _alumneRepo.GetByIdAsync(id, ct);
+        if (alumne == null) return NotFound(ApiResponse.Fail("Alumne no trobat"));
+
+        alumne.Nom = dto.Nom;
+        alumne.Cognom1 = dto.Cognom1;
+        alumne.Cognom2 = dto.Cognom2;
+        alumne.DataNaixement = dto.DataNaixement;
+        alumne.EmailFamilia = dto.EmailFamilia;
+        alumne.OrdreFusteta = dto.OrdreFusteta;
+        alumne.EsActiu = dto.EsActiu;
+
+        await _alumneRepo.ActualitzarAsync(alumne, ct);
+        await _alumneRepo.SaveChangesAsync(ct);
+
+        return Ok(ApiResponse.Ok());
+    }
+
+    /// <summary>Elimina (soft delete) un alumne. Requereix rol Equip Directiu.</summary>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "NomesEquipDirectiu")]
+    public async Task<ActionResult<ApiResponse>> EsborrarAlumne(Guid id, CancellationToken ct)
+    {
+        var alumne = await _alumneRepo.GetByIdAsync(id, ct);
+        if (alumne == null) return NotFound(ApiResponse.Fail("Alumne no trobat"));
+
+        await _alumneRepo.EsborrarAsync(id, ct);
+        await _alumneRepo.SaveChangesAsync(ct);
+
+        return Ok(ApiResponse.Ok());
+    }
+
+    // ── Helpers ─────────────────────────────────────────────
+
+    private static AlumneDto MaparAlumne(Alumne a) => new()
+    {
+        Id = a.Id,
+        Nom = a.Nom,
+        Cognom1 = a.Cognom1,
+        Cognom2 = a.Cognom2,
+        NomComplet = a.NomComplet,
+        NomFusteta = a.NomFusteta,
+        DataNaixement = a.DataNaixement,
+        FotoPath = a.FotoPath,
+        EmailFamilia = a.EmailFamilia,
+        GrupId = a.GrupId,
+        OrdreFusteta = a.OrdreFusteta,
+        EsActiu = a.EsActiu
+    };
+}

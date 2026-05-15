@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>AssistenciaPlus.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AssistenciaPlus.Core\AssistenciaPlus.Core.csproj" />
+    <ProjectReference Include="..\AssistenciaPlus.Domain\AssistenciaPlus.Domain.csproj" />
+    <ProjectReference Include="..\AssistenciaPlus.Application\AssistenciaPlus.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Entity Framework Core + PostgreSQL -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
+
+    <!-- Redis -->
+    <PackageReference Include="StackExchange.Redis" Version="2.7.33" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.0" />
+
+    <!-- Excel -->
+    <PackageReference Include="ClosedXML" Version="0.102.1" />
+
+    <!-- BCrypt per hash de contrasenyes -->
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+
+    <!-- Logging -->
+    <PackageReference Include="Serilog" Version="3.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+  </ItemGroup>
+</Project>

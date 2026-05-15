@@ -1,0 +1,53 @@
+# =============================================================
+# AssistenciaPlus - .gitignore
+# =============================================================
+
+# Secrets i configuració local
+.env
+nginx/certs/
+
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+*.swp
+*.sln.DotSettings.user
+
+# NuGet
+**/.nuget/
+**/packages/
+*.nupkg
+
+# Logs
+**/logs/
+*.log
+
+# Uploads locals
+**/uploads/
+
+# Cobertura de proves
+**/TestResults/
+**/coverage/
+*.coveragexml
+
+# Docker volums locals
+postgres_data/
+redis_data/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Rider / VS Code
+.idea/
+.vscode/
+*.iml
+
+# Publish output
+**/publish/

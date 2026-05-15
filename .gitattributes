@@ -1,0 +1,10 @@
+# Normalitza salts de línia a LF al repositori
+* text=auto eol=lf
+
+# Scripts de bash sempre LF
+*.sh text eol=lf
+
+# Fitxers Windows poden tenir CRLF
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf

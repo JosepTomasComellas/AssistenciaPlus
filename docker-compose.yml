@@ -1,0 +1,179 @@
+version: "3.9"
+
+# =============================================================
+# AssistenciaPlus - Docker Compose
+# Serveis: nginx, web, api, db (PostgreSQL), redis, ollama
+# =============================================================
+
+services:
+
+  # ── Proxy invers ─────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: assistenciaplus_nginx
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT}:443"
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - web
+      - api
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Frontend Blazor WASM ──────────────────────────────────
+  web:
+    build:
+      context: ./src
+      dockerfile: AssistenciaPlus.Web/Dockerfile
+      args:
+        - APP_PUBLIC_URL=${APP_PUBLIC_URL}
+    container_name: assistenciaplus_web
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${APP_ENV}
+      - ApiBaseUrl=${APP_PUBLIC_URL}/api
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Backend API ───────────────────────────────────────────
+  api:
+    build:
+      context: ./src
+      dockerfile: AssistenciaPlus.Api/Dockerfile
+    container_name: assistenciaplus_api
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${APP_ENV}
+      - ConnectionStrings__DefaultConnection=${CONNECTION_STRING}
+      - Redis__ConnectionString=${REDIS_CONNECTION}
+      - Jwt__Secret=${JWT_SECRET}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - Jwt__ExpiryMinutes=${JWT_EXPIRY_MINUTES}
+      - Smtp__Host=${SMTP_HOST}
+      - Smtp__Port=${SMTP_PORT}
+      - Smtp__User=${SMTP_USER}
+      - Smtp__Password=${SMTP_PASSWORD}
+      - Smtp__FromName=${SMTP_FROM_NAME}
+      - Smtp__FromEmail=${SMTP_FROM_EMAIL}
+      - Ollama__Url=${OLLAMA_URL}
+      - Ollama__Model=${OLLAMA_MODEL}
+      - App__PublicUrl=${APP_PUBLIC_URL}
+      - App__LogPath=${LOG_PATH:-/app/logs}
+      - Escola__EmailInformes=${ESCOLA_EMAIL_INFORMES:-a8059721@xtec.cat}
+      - Logging__LogLevel__Default=${LOG_LEVEL}
+    volumes:
+      - api_logs:${LOG_PATH}
+      - uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  # ── Base de dades PostgreSQL ──────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: assistenciaplus_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/db-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis (sessions + cache) ──────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: assistenciaplus_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1
+      --loglevel notice
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Ollama (IA local) ─────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: assistenciaplus_ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - backend
+    # Descomentar si el servidor té GPU NVIDIA:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+# ── Xarxes ────────────────────────────────────────────────
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
+
+# ── Volums ────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  ollama_data:
+    driver: local
+  nginx_logs:
+    driver: local
+  api_logs:
+    driver: local
+  uploads:
+    driver: local

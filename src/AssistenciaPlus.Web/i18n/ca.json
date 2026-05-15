@@ -1,0 +1,139 @@
+{
+  "App": {
+    "Name": "AssistenciaPlus",
+    "Tagline": "Sistema de gestió d'assistència"
+  },
+  "Nav": {
+    "Dashboard": "Inici",
+    "Attendance": "Assistència",
+    "Students": "Alumnes",
+    "Groups": "Grups",
+    "Schedules": "Horaris",
+    "Reports": "Informes",
+    "Users": "Usuaris",
+    "Settings": "Configuració",
+    "AcademicYears": "Anys acadèmics",
+    "AIQuery": "Consulta IA"
+  },
+  "Auth": {
+    "Login": "Iniciar sessió",
+    "Logout": "Tancar sessió",
+    "Email": "Correu electrònic",
+    "Password": "Contrasenya",
+    "ForgotPassword": "Has oblidat la contrasenya?",
+    "ChangePassword": "Canviar contrasenya",
+    "CurrentPassword": "Contrasenya actual",
+    "NewPassword": "Nova contrasenya",
+    "ConfirmPassword": "Confirmar contrasenya",
+    "Welcome": "Benvingut/da",
+    "LoginError": "Credencials incorrectes. Torna-ho a intentar."
+  },
+  "Attendance": {
+    "Title": "Assistència",
+    "TodaySessions": "Sessions d'avui",
+    "OpenSession": "Obrir llista",
+    "CloseSession": "Tancar llista",
+    "SessionOpen": "Llista oberta",
+    "SessionClosed": "Llista tancada",
+    "SessionPending": "Pendent",
+    "SessionCancelled": "Cancel·lada",
+    "Present": "Present",
+    "Absent": "Absent",
+    "Justified": "Justificat",
+    "Observation": "Observació",
+    "JustificationNote": "Motiu de la justificació",
+    "SaveAttendance": "Desar assistència",
+    "AllPresent": "Tots presents",
+    "NoSessions": "No hi ha sessions programades per avui",
+    "ModifiedBy": "Modificat per",
+    "RecordedBy": "Registrat per"
+  },
+  "Students": {
+    "Title": "Alumnes",
+    "FullName": "Nom complet",
+    "FirstName": "Nom",
+    "LastName": "Primer cognom",
+    "SecondLastName": "Segon cognom",
+    "IdNumber": "NIA / DNI",
+    "Email": "Correu",
+    "Phone": "Telèfon",
+    "Group": "Grup",
+    "Active": "Actiu",
+    "Import": "Importar des d'Excel (Esfera)",
+    "ImportSuccess": "S'han importat {0} alumnes correctament",
+    "ImportErrors": "{0} files amb errors"
+  },
+  "Groups": {
+    "Title": "Grups",
+    "Code": "Codi",
+    "Name": "Nom",
+    "Cycle": "Cicle",
+    "CourseYear": "Curs",
+    "StudentCount": "Alumnes"
+  },
+  "Reports": {
+    "Title": "Informes",
+    "Filter": "Filtrar",
+    "Export": "Exportar Excel",
+    "ExportPDF": "Exportar PDF",
+    "DateFrom": "Des de",
+    "DateTo": "Fins a",
+    "AttendancePercentage": "% Assistència",
+    "TotalSessions": "Total sessions",
+    "TotalAbsences": "Total absències",
+    "Generate": "Generar informe"
+  },
+  "Users": {
+    "Title": "Usuaris",
+    "Role": "Rol",
+    "Roles": {
+      "Teacher": "Professor/a",
+      "Management": "Equip Directiu",
+      "Administrative": "Administratiu/va"
+    },
+    "Create": "Nou usuari",
+    "SendCredentials": "Enviar credencials",
+    "Photo": "Foto",
+    "LastLogin": "Últim accés",
+    "Active": "Actiu"
+  },
+  "AcademicYear": {
+    "Title": "Any acadèmic",
+    "Name": "Nom",
+    "StartDate": "Data d'inici",
+    "EndDate": "Data de fi",
+    "Active": "Actiu",
+    "Activate": "Activar",
+    "Migrate": "Migrar a nou any"
+  },
+  "AI": {
+    "Title": "Consulta en llenguatge natural",
+    "Placeholder": "Escriu la teva pregunta sobre les dades d'assistència...",
+    "Examples": "Exemples de consultes",
+    "Send": "Enviar",
+    "Thinking": "Processant...",
+    "Unavailable": "El servei d'IA no està disponible en aquest moment",
+    "ExportResults": "Exportar resultats"
+  },
+  "Common": {
+    "Save": "Desar",
+    "Cancel": "Cancel·lar",
+    "Delete": "Eliminar",
+    "Edit": "Editar",
+    "Create": "Crear",
+    "Search": "Cercar",
+    "Loading": "Carregant...",
+    "NoData": "No hi ha dades",
+    "Confirm": "Confirmar",
+    "Yes": "Sí",
+    "No": "No",
+    "Actions": "Accions",
+    "Back": "Tornar",
+    "Next": "Següent",
+    "Previous": "Anterior",
+    "Success": "Operació realitzada correctament",
+    "Error": "S'ha produït un error",
+    "Required": "Camp obligatori",
+    "SelectAll": "Seleccionar tots"
+  }
+}
