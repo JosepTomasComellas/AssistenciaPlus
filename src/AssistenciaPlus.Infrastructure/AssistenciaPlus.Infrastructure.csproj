@@ -24,6 +24,9 @@
 
     <!-- Excel -->
     <PackageReference Include="ClosedXML" Version="0.104.1" />
+    <!-- Overrides de paquets vulnerables (deps transitives de ClosedXML) -->
+    <PackageReference Include="System.IO.Packaging" Version="10.0.0" />
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.0" />
 
     <!-- BCrypt per hash de contrasenyes -->
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
