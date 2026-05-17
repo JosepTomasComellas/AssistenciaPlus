@@ -6,6 +6,7 @@ using AssistenciaPlus.Core.Interfaces;
 using AssistenciaPlus.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace AssistenciaPlus.Api.Controllers;
 
@@ -22,6 +23,7 @@ public class ConfiguracioController : ControllerBase
     private readonly IGrupRepository _grupRepo;
     private readonly IUsuariRepository _usuariRepo;
     private readonly IEmailService _emailService;
+    private readonly IOllamaService _ollamaService;
     private readonly IConfiguration _config;
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<ConfiguracioController> _logger;
@@ -34,6 +36,7 @@ public class ConfiguracioController : ControllerBase
         IGrupRepository grupRepo,
         IUsuariRepository usuariRepo,
         IEmailService emailService,
+        IOllamaService ollamaService,
         IConfiguration config,
         IWebHostEnvironment env,
         ILogger<ConfiguracioController> logger)
@@ -42,6 +45,7 @@ public class ConfiguracioController : ControllerBase
         _grupRepo = grupRepo;
         _usuariRepo = usuariRepo;
         _emailService = emailService;
+        _ollamaService = ollamaService;
         _config = config;
         _env = env;
         _logger = logger;
@@ -198,6 +202,95 @@ public class ConfiguracioController : ControllerBase
         await _calendariRepo.SaveChangesAsync(ct);
 
         _logger.LogInformation("ICS importat: {Count} festius per {Nom}", importats, anyAcademic.Nom);
+        return Ok(ApiResponse<int>.Ok(importats));
+    }
+
+    /// <summary>Importa dies no lectius des d'un PDF de calendari escolar, usant Ollama.</summary>
+    [HttpPost("calendari/{anyAcademicId:guid}/importar-pdf")]
+    [RequestSizeLimit(20 * 1024 * 1024)]
+    public async Task<ActionResult<ApiResponse<int>>> ImportarPdf(
+        Guid anyAcademicId, IFormFile fitxer, CancellationToken ct)
+    {
+        var anyAcademic = await _calendariRepo.GetAnyAcademicPerIdAsync(anyAcademicId, ct);
+        if (anyAcademic == null)
+            return NotFound(ApiResponse<int>.Fail("Any acadèmic no trobat"));
+
+        if (fitxer is null || fitxer.Length == 0)
+            return BadRequest(ApiResponse<int>.Fail("Cal seleccionar un fitxer PDF"));
+
+        if (!fitxer.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+            && fitxer.ContentType != "application/pdf")
+            return BadRequest(ApiResponse<int>.Fail("Cal seleccionar un fitxer .pdf"));
+
+        string textPdf;
+        try
+        {
+            using var stream = fitxer.OpenReadStream();
+            textPdf = ExtreurTextPdf(stream);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error llegint el PDF del calendari");
+            return BadRequest(ApiResponse<int>.Fail("No s'ha pogut llegir el fitxer PDF"));
+        }
+
+        if (string.IsNullOrWhiteSpace(textPdf) || textPdf.Length < 30)
+            return BadRequest(ApiResponse<int>.Fail(
+                "El PDF no conté text seleccionable. Prova exportant el calendari com a .ics des de Google Calendar."));
+
+        if (!await _ollamaService.IsAvailableAsync(ct))
+            return StatusCode(503, ApiResponse<int>.Fail(
+                "El servei d'IA (Ollama) no està disponible. Comprova que el contenidor Ollama s'està executant."));
+
+        var resposta = await _ollamaService.ParsearCalendariPdfAsync(textPdf, ct);
+        var dates = ParsearRespostaOllamaCalendari(resposta);
+
+        if (dates.Count == 0)
+        {
+            _logger.LogWarning("Ollama no ha extret cap data del PDF. Resposta: {R}", resposta[..Math.Min(200, resposta.Length)]);
+            return Ok(ApiResponse<int>.Ok(0));
+        }
+
+        var diesExistents = await _calendariRepo.GetDiesRangAsync(
+            anyAcademicId, anyAcademic.DataInici, anyAcademic.DataFi, ct);
+        var diesPer = diesExistents.ToDictionary(d => d.Data);
+        var nous = new List<DiaCalendari>();
+        int importats = 0;
+
+        foreach (var (data, tipusStr, descripcio) in dates)
+        {
+            if (data < anyAcademic.DataInici || data > anyAcademic.DataFi) continue;
+            var tipusDia = tipusStr switch
+            {
+                "jornadaIntensiva" => TipusDia.JornadaIntensiva,
+                "noLectiu" => TipusDia.NoLectiu,
+                _ => TipusDia.Festiu
+            };
+
+            if (diesPer.TryGetValue(data, out var diaExistent))
+            {
+                diaExistent.TipusDia = tipusDia;
+                diaExistent.Descripcio = descripcio;
+                await _calendariRepo.ActualitzarDiaAsync(diaExistent, ct);
+            }
+            else
+            {
+                nous.Add(new DiaCalendari
+                {
+                    AnyAcademicId = anyAcademicId,
+                    Data = data,
+                    TipusDia = tipusDia,
+                    Descripcio = descripcio
+                });
+            }
+            importats++;
+        }
+
+        if (nous.Count > 0)
+            await _calendariRepo.AfegirDiesAsync(nous, ct);
+        await _calendariRepo.SaveChangesAsync(ct);
+
+        _logger.LogInformation("PDF calendari importat via Ollama: {Count} dies per {Nom}", importats, anyAcademic.Nom);
         return Ok(ApiResponse<int>.Ok(importats));
     }
 
@@ -602,6 +695,49 @@ public class ConfiguracioController : ControllerBase
     }
 
     // ── Helpers ─────────────────────────────────────────────
+
+    private static string ExtreurTextPdf(Stream stream)
+    {
+        using var document = UglyToad.PdfPig.PdfDocument.Open(stream);
+        var sb = new System.Text.StringBuilder();
+        foreach (var page in document.GetPages())
+        {
+            foreach (var word in page.GetWords())
+                sb.Append(word.Text).Append(' ');
+            sb.AppendLine();
+        }
+        return sb.ToString().Trim();
+    }
+
+    private static List<(DateOnly Data, string Tipus, string Descripcio)> ParsearRespostaOllamaCalendari(
+        string resposta)
+    {
+        var result = new List<(DateOnly, string, string)>();
+        try
+        {
+            var start = resposta.IndexOf('{');
+            var end = resposta.LastIndexOf('}');
+            if (start < 0 || end <= start) return result;
+
+            using var doc = JsonDocument.Parse(resposta[start..(end + 1)]);
+            if (!doc.RootElement.TryGetProperty("dies", out var dies)) return result;
+
+            foreach (var dia in dies.EnumerateArray())
+            {
+                var dataStr = dia.TryGetProperty("data", out var d) ? d.GetString() : null;
+                if (dataStr == null) continue;
+                if (!DateOnly.TryParseExact(dataStr, "yyyy-MM-dd", null,
+                        System.Globalization.DateTimeStyles.None, out var data))
+                    continue;
+
+                var tipus = dia.TryGetProperty("tipus", out var t) ? t.GetString() ?? "festiu" : "festiu";
+                var desc = dia.TryGetProperty("descripcio", out var de) ? de.GetString() ?? "" : "";
+                result.Add((data, tipus, desc));
+            }
+        }
+        catch (JsonException) { }
+        return result;
+    }
 
     private static List<(DateOnly Start, DateOnly End, string Summary)> ParsearIcs(string content)
     {

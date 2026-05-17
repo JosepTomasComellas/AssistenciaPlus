@@ -93,6 +93,59 @@ public class OllamaService : IOllamaService
         }
     }
 
+    public async Task<string> ParsearCalendariPdfAsync(string textPdf, CancellationToken ct = default)
+    {
+        try
+        {
+            const string exempleJson =
+                """{"dies":[{"data":"YYYY-MM-DD","tipus":"festiu","descripcio":"nom"},{"data":"YYYY-MM-DD","tipus":"noLectiu","descripcio":"nom"}]}""";
+            const string buit = """{"dies":[]}""";
+            var text = textPdf[..Math.Min(textPdf.Length, 12000)];
+
+            var prompt = $"""
+                Ets un sistema d'extracció de dades de calendaris escolars.
+                Analitza el text d'un calendari escolar català i extreu TOTS els dies NO lectius.
+
+                RETORNA UNICAMENT un JSON valid amb aquest format exacte, sense cap text addicional:
+                {exempleJson}
+
+                Valors possibles de "tipus":
+                - "festiu" per a festius oficials (Nadal, Reis, Setmana Santa, Sant Joan, etc.)
+                - "noLectiu" per a vacances escolars, ponts i dies de lliure disposicio
+                - "jornadaIntensiva" per a jornada intensiva (normalment juny)
+
+                Regles:
+                - No incloguis caps de setmana (dissabte ni diumenge)
+                - Format de data obligatori: YYYY-MM-DD
+                - Si un rang es no lectiu, inclou cada dia individualment
+                - Si no trobes cap dia especial, retorna {buit}
+
+                TEXT DEL CALENDARI:
+                {text}
+                """;
+
+            var request = new
+            {
+                model = _settings.Model,
+                messages = new[] { new { role = "user", content = prompt } },
+                stream = false,
+                options = new { temperature = 0.0 }
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("/api/chat", request, ct);
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.GetProperty("message").GetProperty("content").GetString() ?? "{}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error parsejant calendari PDF amb Ollama");
+            return "{}";
+        }
+    }
+
     public async Task<bool> IsAvailableAsync(CancellationToken ct = default)
     {
         try

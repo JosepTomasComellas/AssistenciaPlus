@@ -85,6 +85,7 @@ public interface IExcelExportService
 public interface IOllamaService
 {
     Task<string> QueryAsync(string naturalLanguageQuery, string dataContext, CancellationToken ct = default);
+    Task<string> ParsearCalendariPdfAsync(string textPdf, CancellationToken ct = default);
     Task<bool> IsAvailableAsync(CancellationToken ct = default);
 }
 

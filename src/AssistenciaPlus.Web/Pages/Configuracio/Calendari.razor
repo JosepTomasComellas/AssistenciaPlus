@@ -52,37 +52,75 @@ else
         </div>
     </MudPaper>
 
-    <!-- Import ICS -->
+    <!-- Import -->
     <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-radius:12px">
-        <MudText Typo="Typo.h6" Style="font-weight:600" Class="mb-2">
-            Importar festius des d'un fitxer .ics
+        <MudText Typo="Typo.h6" Style="font-weight:600" Class="mb-1">
+            Importar dies especials
         </MudText>
-        <MudText Typo="Typo.body2" Style="color:#4A5568" Class="mb-3">
-            Puja un fitxer en format iCalendar (.ics) per importar automàticament els dies festius
-            a l'any acadèmic <strong>@_anySeleccionat!.Nom</strong>.
-            Pots exportar-lo des de Google Calendar, Apple Calendar, Outlook,
-            o descarregar el <em>Calendari de dies festius de Catalunya</em> de data.gencat.cat.
+        <MudText Typo="Typo.body2" Style="color:#4A5568" Class="mb-4">
+            Importa el calendari escolar de <strong>@_anySeleccionat!.Nom</strong> des d'un fitxer.
         </MudText>
-        <div class="d-flex align-center flex-wrap gap-3">
-            @if (!_importantIcs)
-            {
-                <InputFile id="inputIcs" OnChange="ImportarIcsAsync"
-                    accept=".ics,text/calendar" style="display:none" />
-            }
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
-                StartIcon="@Icons.Material.Filled.FileUpload"
-                HtmlTag="label" for="inputIcs"
-                Disabled="_importantIcs">
-                @if (_importantIcs)
-                {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
-                }
-                Importar fitxer .ics
-            </MudButton>
-            <MudText Typo="Typo.caption" Style="color:#A0AEC0">
-                Format iCalendar (.ics) · màx. 5 MB
-            </MudText>
-        </div>
+
+        <MudGrid>
+            <!-- Opció 1: ICS -->
+            <MudItem xs="12" sm="6">
+                <div style="border:1px solid #E2E8F0;border-radius:8px;padding:16px">
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:600" Class="mb-1">
+                        Fitxer .ics (iCalendar)
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color:#718096" Class="mb-3">
+                        Exporta el calendari des de Google Calendar, Apple Calendar o Outlook.
+                        El <em>Calendari de dies festius de Catalunya</em> també el trobaràs a data.gencat.cat.
+                    </MudText>
+                    @if (!_importantIcs)
+                    {
+                        <InputFile id="inputIcs" OnChange="ImportarIcsAsync"
+                            accept=".ics,text/calendar" style="display:none" />
+                    }
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true"
+                        StartIcon="@Icons.Material.Filled.CalendarToday"
+                        HtmlTag="label" for="inputIcs"
+                        Disabled="@(_importantIcs || _importantPdf)">
+                        @if (_importantIcs)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                        }
+                        Importar .ics
+                    </MudButton>
+                </div>
+            </MudItem>
+
+            <!-- Opció 2: PDF via Ollama -->
+            <MudItem xs="12" sm="6">
+                <div style="border:1px solid #E2E8F0;border-radius:8px;padding:16px">
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:600" Class="mb-1">
+                        PDF del calendari escolar
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info"
+                            Style="height:18px;font-size:0.65rem;margin-left:6px">IA</MudChip>
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color:#718096" Class="mb-3">
+                        Puja el PDF del calendari escolar publicat per l'escola.
+                        La IA (Ollama) extraurà automàticament els dies festius.
+                        Requereix que el PDF tingui text seleccionable.
+                    </MudText>
+                    @if (!_importantPdf)
+                    {
+                        <InputFile id="inputPdf" OnChange="ImportarPdfAsync"
+                            accept=".pdf,application/pdf" style="display:none" />
+                    }
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" FullWidth="true"
+                        StartIcon="@Icons.Material.Filled.PictureAsPdf"
+                        HtmlTag="label" for="inputPdf"
+                        Disabled="@(_importantIcs || _importantPdf)">
+                        @if (_importantPdf)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                        }
+                        Importar PDF
+                    </MudButton>
+                </div>
+            </MudItem>
+        </MudGrid>
     </MudPaper>
 
     <!-- Dies especials -->
@@ -199,6 +237,7 @@ else
     private List<DiaCalendariModel> _diesEspecials = [];
     private bool _carregant = true;
     private bool _importantIcs;
+    private bool _importantPdf;
     private bool _dialogObert;
     private bool _desant;
 
@@ -273,6 +312,37 @@ else
         finally
         {
             _importantIcs = false;
+        }
+    }
+
+    private async Task ImportarPdfAsync(InputFileChangeEventArgs e)
+    {
+        _importantPdf = true;
+        try
+        {
+            var (ok, importats, error) = await ConfiguracioService.ImportarPdfAsync(_anySeleccionat!.Id, e.File);
+            if (ok)
+            {
+                if (importats == 0)
+                    Snackbar.Add("La IA no ha trobat dies especials al PDF. Revisa que el PDF tingui text seleccionable.", Severity.Warning);
+                else
+                {
+                    Snackbar.Add($"PDF processat per la IA: {importats} dies importats", Severity.Success);
+                    await CarregarDiesAsync();
+                }
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error en processar el PDF", Severity.Error);
+            }
+        }
+        catch
+        {
+            Snackbar.Add("No s'ha pogut processar el PDF. Comprova que Ollama està en marxa.", Severity.Error);
+        }
+        finally
+        {
+            _importantPdf = false;
         }
     }
 

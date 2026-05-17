@@ -126,6 +126,21 @@ public class ConfiguracioService
         return (result?.Success == true, result?.Data, result?.Error);
     }
 
+    public async Task<(bool Ok, int? Importats, string? Error)> ImportarPdfAsync(
+        Guid anyAcademicId, IBrowserFile fitxer)
+    {
+        using var contingut = new MultipartFormDataContent();
+        var stream = fitxer.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024);
+        var streamContent = new StreamContent(stream);
+        streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        contingut.Add(streamContent, "fitxer", fitxer.Name);
+
+        var response = await _http.PostAsync(
+            $"configuracio/calendari/{anyAcademicId}/importar-pdf", contingut);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<int>>(_opts);
+        return (result?.Success == true, result?.Data, result?.Error);
+    }
+
     // ── Grups ────────────────────────────────────────────────
 
     public async Task<List<GrupModel>> GetGrupsConfiguracioAsync()

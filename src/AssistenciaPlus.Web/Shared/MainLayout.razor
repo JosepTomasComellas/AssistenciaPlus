@@ -53,8 +53,8 @@
                         Class="d-none d-sm-flex">
                         @context.User.Identity?.Name
                     </MudText>
-                    <!-- Wrapper relatiu: el MudMenu ocupa tot l'espai; l'avatar és visual per sobre -->
-                    <div style="position:relative;display:inline-flex">
+                    <!-- Wrapper de 40x40: el MudMenu és clickable; l'avatar és una capa visual per sobre -->
+                    <div style="position:relative;width:40px;height:40px;flex-shrink:0">
                         <MudMenu Icon="@Icons.Material.Filled.AccountCircle"
                             Color="Color.Inherit"
                             AnchorOrigin="Origin.BottomRight"
@@ -72,11 +72,11 @@
                         @if (!string.IsNullOrEmpty(_usuariActual?.FotoPath))
                         {
                             <img src="@_usuariActual.FotoPath" alt=""
-                                style="position:absolute;inset:4px;border-radius:50%;object-fit:cover;pointer-events:none;border:2px solid rgba(255,255,255,0.5)" />
+                                style="position:absolute;top:4px;left:4px;width:32px;height:32px;border-radius:50%;object-fit:cover;pointer-events:none;border:2px solid rgba(255,255,255,0.6)" />
                         }
                         else if ((_usuariActual?.NomComplet ?? context.User.Identity?.Name) is { Length: > 0 } nomU)
                         {
-                            <div style="position:absolute;inset:4px;border-radius:50%;background:#7B1FA2;display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;font-weight:700;pointer-events:none;letter-spacing:0.02em">
+                            <div style="position:absolute;top:4px;left:4px;width:32px;height:32px;border-radius:50%;background:#7B1FA2;display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;font-weight:700;pointer-events:none;letter-spacing:0.02em">
                                 @nomU[..Math.Min(2, nomU.Length)]
                             </div>
                         }
