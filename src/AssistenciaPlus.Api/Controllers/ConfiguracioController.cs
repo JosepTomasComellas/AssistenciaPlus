@@ -140,6 +140,81 @@ public class ConfiguracioController : ControllerBase
         return Ok(ApiResponse.Ok());
     }
 
+    /// <summary>Importa dies festius des d'un fitxer .ics.</summary>
+    [HttpPost("calendari/{anyAcademicId:guid}/importar-ics")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    public async Task<ActionResult<ApiResponse<int>>> ImportarIcs(
+        Guid anyAcademicId, IFormFile fitxer, CancellationToken ct)
+    {
+        var anyAcademic = await _calendariRepo.GetAnyAcademicPerIdAsync(anyAcademicId, ct);
+        if (anyAcademic == null)
+            return NotFound(ApiResponse<int>.Fail("Any acadèmic no trobat"));
+
+        if (fitxer is null || fitxer.Length == 0)
+            return BadRequest(ApiResponse<int>.Fail("Cal seleccionar un fitxer .ics"));
+
+        string contingut;
+        using (var reader = new StreamReader(fitxer.OpenReadStream()))
+            contingut = await reader.ReadToEndAsync(ct);
+
+        var events = ParsearIcs(contingut);
+        var diesExistents = await _calendariRepo.GetDiesRangAsync(
+            anyAcademicId, anyAcademic.DataInici, anyAcademic.DataFi, ct);
+        var diesPer = diesExistents.ToDictionary(d => d.Data);
+
+        var nous = new List<DiaCalendari>();
+        var processats = new HashSet<DateOnly>();
+        int importats = 0;
+
+        foreach (var (dataInici, dataFi, resum) in events)
+        {
+            for (var data = dataInici; data < dataFi; data = data.AddDays(1))
+            {
+                if (data < anyAcademic.DataInici || data > anyAcademic.DataFi) continue;
+                if (!processats.Add(data)) continue;
+
+                if (diesPer.TryGetValue(data, out var diaExistent))
+                {
+                    diaExistent.TipusDia = TipusDia.Festiu;
+                    diaExistent.Descripcio = resum;
+                    await _calendariRepo.ActualitzarDiaAsync(diaExistent, ct);
+                }
+                else
+                {
+                    nous.Add(new DiaCalendari
+                    {
+                        AnyAcademicId = anyAcademicId,
+                        Data = data,
+                        TipusDia = TipusDia.Festiu,
+                        Descripcio = resum
+                    });
+                }
+                importats++;
+            }
+        }
+
+        if (nous.Count > 0)
+            await _calendariRepo.AfegirDiesAsync(nous, ct);
+        await _calendariRepo.SaveChangesAsync(ct);
+
+        _logger.LogInformation("ICS importat: {Count} festius per {Nom}", importats, anyAcademic.Nom);
+        return Ok(ApiResponse<int>.Ok(importats));
+    }
+
+    /// <summary>Elimina un dia especial del calendari (el retorna a Lectiu).</summary>
+    [HttpDelete("calendari/dia/{anyAcademicId:guid}/{data}")]
+    public async Task<ActionResult<ApiResponse>> EsborrarDia(
+        Guid anyAcademicId, string data, CancellationToken ct)
+    {
+        if (!DateOnly.TryParseExact(data, "yyyy-MM-dd", null,
+                System.Globalization.DateTimeStyles.None, out var dataValida))
+            return BadRequest(ApiResponse.Fail("Format de data invàlid (usa yyyy-MM-dd)"));
+
+        await _calendariRepo.EsborrarDiaAsync(anyAcademicId, dataValida, ct);
+        await _calendariRepo.SaveChangesAsync(ct);
+        return Ok(ApiResponse.Ok());
+    }
+
     // ── Usuaris ──────────────────────────────────────────────
 
     /// <summary>Llista tots els usuaris del sistema.</summary>
@@ -527,6 +602,63 @@ public class ConfiguracioController : ControllerBase
     }
 
     // ── Helpers ─────────────────────────────────────────────
+
+    private static List<(DateOnly Start, DateOnly End, string Summary)> ParsearIcs(string content)
+    {
+        var events = new List<(DateOnly, DateOnly, string)>();
+        var lines = content.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
+
+        var unfolded = new List<string>();
+        foreach (var line in lines)
+        {
+            if (line.Length > 0 && (line[0] == ' ' || line[0] == '\t') && unfolded.Count > 0)
+                unfolded[^1] += line[1..];
+            else
+                unfolded.Add(line.TrimEnd());
+        }
+
+        bool inEvent = false;
+        DateOnly? dtStart = null, dtEnd = null;
+        string summary = "";
+
+        foreach (var line in unfolded)
+        {
+            if (line == "BEGIN:VEVENT") { inEvent = true; dtStart = dtEnd = null; summary = ""; }
+            else if (line == "END:VEVENT" && inEvent)
+            {
+                if (dtStart.HasValue)
+                    events.Add((dtStart.Value, dtEnd ?? dtStart.Value.AddDays(1), summary));
+                inEvent = false;
+            }
+            else if (inEvent)
+            {
+                var ci = line.IndexOf(':');
+                if (ci < 0) continue;
+                var propRaw = line[..ci];
+                var val = line[(ci + 1)..];
+                var prop = propRaw.Contains(';') ? propRaw[..propRaw.IndexOf(';')] : propRaw;
+
+                if (prop == "DTSTART") dtStart = ParsearDataIcs(val);
+                else if (prop == "DTEND") dtEnd = ParsearDataIcs(val);
+                else if (prop == "SUMMARY") summary = val.Trim();
+            }
+        }
+
+        return events;
+    }
+
+    private static DateOnly? ParsearDataIcs(string value)
+    {
+        value = value.Trim();
+        if (value.Length >= 8
+            && int.TryParse(value[..4], out int y)
+            && int.TryParse(value[4..6], out int m)
+            && int.TryParse(value[6..8], out int d))
+        {
+            try { return new DateOnly(y, m, d); } catch { }
+        }
+        return null;
+    }
 
     private static CicleDto MaparCicle(Cicle c) => new()
     {

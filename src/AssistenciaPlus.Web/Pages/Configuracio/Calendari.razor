@@ -1,0 +1,374 @@
+@page "/configuracio/calendari"
+@attribute [Authorize(Roles = "EquipDirectiu")]
+@inject ConfiguracioService ConfiguracioService
+@inject ISnackbar Snackbar
+@inject BreadcrumbService BreadcrumbService
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>Calendari escolar — Configuració</PageTitle>
+
+<div class="mb-5">
+    <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">Calendari escolar</MudText>
+    <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
+        Gestió dels dies festius i no lectius de l'any acadèmic actiu
+    </MudText>
+</div>
+
+@if (_carregant)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+}
+else if (_anys.Count == 0)
+{
+    <MudAlert Severity="Severity.Warning">
+        No hi ha cap any acadèmic configurat. Crea'n un a
+        <a href="/configuracio/any-academic">Configuració › Any acadèmic</a>.
+    </MudAlert>
+}
+else
+{
+    <!-- Selector d'any acadèmic -->
+    <MudPaper Elevation="0" Class="pa-3 mb-4" Style="border-radius:12px;border:1px solid #E2E8F0;background:#F7FAFC">
+        <div class="d-flex align-center gap-4 flex-wrap">
+            <MudText Typo="Typo.body2" Style="font-weight:600;color:#4A5568;white-space:nowrap">
+                Any acadèmic:
+            </MudText>
+            <MudSelect T="Guid" Value="_anySeleccionatId" ValueChanged="CanviarAnyAsync"
+                Dense="true" Variant="Variant.Outlined"
+                Style="min-width:180px;max-width:260px">
+                @foreach (var any in _anys.OrderByDescending(a => a.DataInici))
+                {
+                    <MudSelectItem Value="@any.Id">
+                        @any.Nom @(any.EsActiu ? "(actiu)" : "")
+                    </MudSelectItem>
+                }
+            </MudSelect>
+            @if (_anySeleccionat != null)
+            {
+                <MudText Typo="Typo.caption" Style="color:#A0AEC0">
+                    @_anySeleccionat.DataInici.ToString("dd/MM/yyyy") – @_anySeleccionat.DataFi.ToString("dd/MM/yyyy")
+                </MudText>
+            }
+        </div>
+    </MudPaper>
+
+    <!-- Import ICS -->
+    <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-radius:12px">
+        <MudText Typo="Typo.h6" Style="font-weight:600" Class="mb-2">
+            Importar festius des d'un fitxer .ics
+        </MudText>
+        <MudText Typo="Typo.body2" Style="color:#4A5568" Class="mb-3">
+            Puja un fitxer en format iCalendar (.ics) per importar automàticament els dies festius
+            a l'any acadèmic <strong>@_anySeleccionat!.Nom</strong>.
+            Pots exportar-lo des de Google Calendar, Apple Calendar, Outlook,
+            o descarregar el <em>Calendari de dies festius de Catalunya</em> de data.gencat.cat.
+        </MudText>
+        <div class="d-flex align-center flex-wrap gap-3">
+            @if (!_importantIcs)
+            {
+                <InputFile id="inputIcs" OnChange="ImportarIcsAsync"
+                    accept=".ics,text/calendar" style="display:none" />
+            }
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                StartIcon="@Icons.Material.Filled.FileUpload"
+                HtmlTag="label" for="inputIcs"
+                Disabled="_importantIcs">
+                @if (_importantIcs)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                }
+                Importar fitxer .ics
+            </MudButton>
+            <MudText Typo="Typo.caption" Style="color:#A0AEC0">
+                Format iCalendar (.ics) · màx. 5 MB
+            </MudText>
+        </div>
+    </MudPaper>
+
+    <!-- Dies especials -->
+    <MudPaper Elevation="1" Class="pa-4" Style="border-radius:12px">
+        <div class="d-flex justify-space-between align-center mb-3">
+            <div>
+                <MudText Typo="Typo.h6" Style="font-weight:600">Dies especials</MudText>
+                <MudText Typo="Typo.caption" Style="color:#A0AEC0">
+                    @_diesEspecials.Count dies configurats per @_anySeleccionat!.Nom
+                </MudText>
+            </div>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                StartIcon="@Icons.Material.Filled.Add"
+                OnClick="ObrirAfegirDia">
+                Afegir dia
+            </MudButton>
+        </div>
+
+        @if (_diesEspecials.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                No hi ha dies especials configurats per a l'any @_anySeleccionat!.Nom.
+                Importa un fitxer .ics o afegeix dies manualment.
+            </MudAlert>
+        }
+        else
+        {
+            <MudTable Items="_diesEspecials" Hover="true" Dense="true" SortLabel="Ordenar per">
+                <HeaderContent>
+                    <MudTh><MudTableSortLabel SortBy="new Func<DiaCalendariModel,object>(d=>d.Data)">Data</MudTableSortLabel></MudTh>
+                    <MudTh>Dia</MudTh>
+                    <MudTh>Tipus</MudTh>
+                    <MudTh>Descripció</MudTh>
+                    <MudTh Style="text-align:center">Accions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Data.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd>
+                        <MudText Typo="Typo.body2" Style="color:#4A5568">
+                            @NomDiaSemana(context.Data)
+                        </MudText>
+                    </MudTd>
+                    <MudTd>
+                        <MudChip T="string" Color="@ColorTipus(context.TipusDia)" Size="Size.Small">
+                            @TextTipus(context.TipusDia)
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>@(context.Descripcio ?? "—")</MudTd>
+                    <MudTd Style="text-align:center">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                            Size="Size.Small" Color="Color.Primary"
+                            OnClick="() => ObrirEditarDia(context)"
+                            title="Editar" />
+                        <MudIconButton Icon="@Icons.Material.Filled.DeleteForever"
+                            Size="Size.Small" Color="Color.Error"
+                            OnClick="() => EsborrarDiaAsync(context)"
+                            title="Eliminar" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
+}
+
+<!-- Dialog afegir/editar dia -->
+<MudDialog @bind-Visible="_dialogObert" Options="_dialogOpts">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            @(_editantDia == null ? "Afegir dia especial" : $"Editar dia {_editantDia.Data:dd/MM/yyyy}")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudDatePicker @bind-Date="_formData" Label="Data"
+                Variant="Variant.Outlined" DateFormat="dd/MM/yyyy"
+                MinDate="@(_anySeleccionat?.DataInici.ToDateTime(TimeOnly.MinValue))"
+                MaxDate="@(_anySeleccionat?.DataFi.ToDateTime(TimeOnly.MinValue))"
+                Disabled="@(_editantDia != null)" />
+            <MudSelect T="int" @bind-Value="_formTipus" Label="Tipus de dia"
+                Variant="Variant.Outlined">
+                <MudSelectItem Value="1">Festiu</MudSelectItem>
+                <MudSelectItem Value="2">Jornada intensiva (només matí)</MudSelectItem>
+                <MudSelectItem Value="3">No lectiu (vacances / pont)</MudSelectItem>
+            </MudSelect>
+            <MudTextField @bind-Value="_formDescripcio" Label="Descripció (opcional)"
+                Variant="Variant.Outlined"
+                HelperText="Ex: Festa Major, Sant Jordi, Claustre..." />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _dialogObert = false" Variant="Variant.Text">Cancel·lar</MudButton>
+        <MudButton OnClick="DesarDiaAsync" Variant="Variant.Filled" Color="Color.Primary"
+            Disabled="_desant">
+            @(_editantDia == null ? "Afegir" : "Desar canvis")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Confirmació esborrat -->
+<MudMessageBox @ref="_confirmBox" Title="Confirmar eliminació" CancelText="Cancel·lar">
+    <MessageContent>@_confirmMissatge</MessageContent>
+    <YesButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error"
+            StartIcon="@Icons.Material.Filled.DeleteForever">
+            Sí, eliminar
+        </MudButton>
+    </YesButton>
+</MudMessageBox>
+
+@code {
+    private List<AnyAcademicModel> _anys = [];
+    private AnyAcademicModel? _anySeleccionat;
+    private Guid _anySeleccionatId;
+    private List<DiaCalendariModel> _diesEspecials = [];
+    private bool _carregant = true;
+    private bool _importantIcs;
+    private bool _dialogObert;
+    private bool _desant;
+
+    private DiaCalendariModel? _editantDia;
+    private DateTime? _formData;
+    private int _formTipus = 1;
+    private string _formDescripcio = string.Empty;
+
+    private MudMessageBox? _confirmBox;
+    private string _confirmMissatge = string.Empty;
+
+    private readonly DialogOptions _dialogOpts = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseButton = true
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        BreadcrumbService.Set(
+            new("Inici", "/"),
+            new("Configuració", null, true),
+            new("Calendari escolar", null, true));
+
+        _anys = await ConfiguracioService.GetAnysAcademicsAsync();
+        _anySeleccionat = _anys.FirstOrDefault(a => a.EsActiu) ?? _anys.FirstOrDefault();
+
+        if (_anySeleccionat != null)
+        {
+            _anySeleccionatId = _anySeleccionat.Id;
+            await CarregarDiesAsync();
+        }
+
+        _carregant = false;
+    }
+
+    private async Task CanviarAnyAsync(Guid anyId)
+    {
+        _anySeleccionatId = anyId;
+        _anySeleccionat = _anys.FirstOrDefault(a => a.Id == anyId);
+        await CarregarDiesAsync();
+    }
+
+    private async Task CarregarDiesAsync()
+    {
+        if (_anySeleccionat == null) return;
+        var tots = await ConfiguracioService.GetCalendariAsync(_anySeleccionat.Id);
+        _diesEspecials = tots.Where(d => d.TipusDia != 0).OrderBy(d => d.Data).ToList();
+    }
+
+    private async Task ImportarIcsAsync(InputFileChangeEventArgs e)
+    {
+        _importantIcs = true;
+        try
+        {
+            var (ok, importats, error) = await ConfiguracioService.ImportarIcsAsync(_anySeleccionat!.Id, e.File);
+            if (ok)
+            {
+                Snackbar.Add($"Importació correcta: {importats} dies festius importats", Severity.Success);
+                await CarregarDiesAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error en importar el fitxer", Severity.Error);
+            }
+        }
+        catch
+        {
+            Snackbar.Add("No s'ha pogut importar el fitxer. Comprova que és un .ics vàlid.", Severity.Error);
+        }
+        finally
+        {
+            _importantIcs = false;
+        }
+    }
+
+    private void ObrirAfegirDia()
+    {
+        _editantDia = null;
+        _formData = _anySeleccionat?.DataInici.ToDateTime(TimeOnly.MinValue);
+        _formTipus = 1;
+        _formDescripcio = string.Empty;
+        _dialogObert = true;
+    }
+
+    private void ObrirEditarDia(DiaCalendariModel dia)
+    {
+        _editantDia = dia;
+        _formData = dia.Data.ToDateTime(TimeOnly.MinValue);
+        _formTipus = dia.TipusDia;
+        _formDescripcio = dia.Descripcio ?? string.Empty;
+        _dialogObert = true;
+    }
+
+    private async Task DesarDiaAsync()
+    {
+        if (_formData == null)
+        {
+            Snackbar.Add("Selecciona una data", Severity.Warning);
+            return;
+        }
+
+        _desant = true;
+        var model = new ActualitzarDiaCalendariModel
+        {
+            AnyAcademicId = _anySeleccionat!.Id,
+            Data = DateOnly.FromDateTime(_formData.Value),
+            TipusDia = _formTipus,
+            Descripcio = string.IsNullOrWhiteSpace(_formDescripcio) ? null : _formDescripcio.Trim()
+        };
+
+        var (ok, error) = await ConfiguracioService.ActualitzarDiaCalendariAsync(model);
+        if (ok)
+        {
+            Snackbar.Add("Dia desat correctament", Severity.Success);
+            _dialogObert = false;
+            await CarregarDiesAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error en desar el dia", Severity.Error);
+        }
+        _desant = false;
+    }
+
+    private async Task EsborrarDiaAsync(DiaCalendariModel dia)
+    {
+        _confirmMissatge = $"Segur que vols eliminar el dia {dia.Data:dd/MM/yyyy} ({TextTipus(dia.TipusDia)})?";
+        var confirm = await _confirmBox!.ShowAsync();
+        if (confirm != true) return;
+
+        var (ok, error) = await ConfiguracioService.EsborrarDiaCalendariAsync(_anySeleccionat!.Id, dia.Data);
+        if (ok)
+        {
+            Snackbar.Add("Dia eliminat correctament", Severity.Success);
+            await CarregarDiesAsync();
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error en eliminar el dia", Severity.Error);
+        }
+    }
+
+    private static string NomDiaSemana(DateOnly data) =>
+        data.ToDateTime(TimeOnly.MinValue).DayOfWeek switch
+        {
+            DayOfWeek.Monday => "Dilluns",
+            DayOfWeek.Tuesday => "Dimarts",
+            DayOfWeek.Wednesday => "Dimecres",
+            DayOfWeek.Thursday => "Dijous",
+            DayOfWeek.Friday => "Divendres",
+            DayOfWeek.Saturday => "Dissabte",
+            DayOfWeek.Sunday => "Diumenge",
+            _ => ""
+        };
+
+    private static Color ColorTipus(int tipus) => tipus switch
+    {
+        1 => Color.Error,
+        2 => Color.Warning,
+        3 => Color.Info,
+        _ => Color.Default
+    };
+
+    private static string TextTipus(int tipus) => tipus switch
+    {
+        1 => "Festiu",
+        2 => "Jornada intensiva",
+        3 => "No lectiu",
+        _ => "Lectiu"
+    };
+}

@@ -368,6 +368,13 @@ public class CalendariRepository : ICalendariRepository
         return Task.CompletedTask;
     }
 
+    public async Task EsborrarDiaAsync(Guid anyAcademicId, DateOnly data, CancellationToken ct = default)
+    {
+        var dia = await _ctx.DiesCalendari.FirstOrDefaultAsync(
+            d => d.AnyAcademicId == anyAcademicId && d.Data == data, ct);
+        if (dia != null) _ctx.DiesCalendari.Remove(dia);
+    }
+
     public async Task<AnyAcademic> AfegirAnyAcademicAsync(AnyAcademic any, CancellationToken ct = default)
     {
         await _ctx.AnysAcademics.AddAsync(any, ct);

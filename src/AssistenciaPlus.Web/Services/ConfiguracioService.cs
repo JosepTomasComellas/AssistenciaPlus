@@ -1,5 +1,6 @@
 using AssistenciaPlus.Web.Models;
 using Microsoft.AspNetCore.Components.Forms;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -84,6 +85,45 @@ public class ConfiguracioService
         var response = await _http.DeleteAsync($"configuracio/cicles/{cicleId}/cursos/{id}");
         var result = await response.Content.ReadFromJsonAsync<ApiResponse>(_opts);
         return (result?.Success == true, result?.Error);
+    }
+
+    // ── Calendari ────────────────────────────────────────────
+
+    public async Task<List<DiaCalendariModel>> GetCalendariAsync(Guid anyAcademicId)
+    {
+        var result = await _http.GetFromJsonAsync<ApiResponse<List<DiaCalendariModel>>>(
+            $"configuracio/calendari/{anyAcademicId}", _opts);
+        return result?.Data ?? [];
+    }
+
+    public async Task<(bool Ok, string? Error)> ActualitzarDiaCalendariAsync(ActualitzarDiaCalendariModel model)
+    {
+        var response = await _http.PutAsJsonAsync("configuracio/calendari/dia", model);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
+    public async Task<(bool Ok, string? Error)> EsborrarDiaCalendariAsync(Guid anyAcademicId, DateOnly data)
+    {
+        var response = await _http.DeleteAsync(
+            $"configuracio/calendari/dia/{anyAcademicId}/{data:yyyy-MM-dd}");
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
+    public async Task<(bool Ok, int? Importats, string? Error)> ImportarIcsAsync(
+        Guid anyAcademicId, IBrowserFile fitxer)
+    {
+        using var contingut = new MultipartFormDataContent();
+        var stream = fitxer.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+        var streamContent = new StreamContent(stream);
+        streamContent.Headers.ContentType = new MediaTypeHeaderValue("text/calendar");
+        contingut.Add(streamContent, "fitxer", fitxer.Name);
+
+        var response = await _http.PostAsync(
+            $"configuracio/calendari/{anyAcademicId}/importar-ics", contingut);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<int>>(_opts);
+        return (result?.Success == true, result?.Data, result?.Error);
     }
 
     // ── Grups ────────────────────────────────────────────────

@@ -240,7 +240,13 @@ try
             ctx.Context.Response.Headers.Append("Cache-Control", "public,max-age=86400")
     });
 
-    app.UseSerilogRequestLogging();
+    app.UseSerilogRequestLogging(options =>
+    {
+        options.GetLevel = (ctx, _, _) =>
+            ctx.Request.Path.StartsWithSegments("/health")
+                ? LogEventLevel.Verbose
+                : LogEventLevel.Information;
+    });
 
     if (app.Environment.IsDevelopment())
     {

@@ -71,6 +71,24 @@ public record CanviContrasenyaModel
     public string ContrasenyaNova { get; init; } = string.Empty;
 }
 
+// ── Calendari ──────────────────────────────────────────────
+public record DiaCalendariModel
+{
+    public Guid Id { get; init; }
+    public Guid AnyAcademicId { get; init; }
+    public DateOnly Data { get; init; }
+    public int TipusDia { get; init; }
+    public string? Descripcio { get; init; }
+}
+
+public record ActualitzarDiaCalendariModel
+{
+    public Guid AnyAcademicId { get; init; }
+    public DateOnly Data { get; init; }
+    public int TipusDia { get; init; }
+    public string? Descripcio { get; init; }
+}
+
 // ── Any acadèmic ───────────────────────────────────────────
 public record AnyAcademicModel
 {

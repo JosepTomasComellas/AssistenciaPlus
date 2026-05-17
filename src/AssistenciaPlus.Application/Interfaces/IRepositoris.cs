@@ -72,6 +72,7 @@ public interface ICalendariRepository
     Task<IReadOnlyList<FranjaHoraria>> GetFranjesAsync(CancellationToken ct = default);
     Task AfegirDiesAsync(IEnumerable<DiaCalendari> dies, CancellationToken ct = default);
     Task ActualitzarDiaAsync(DiaCalendari dia, CancellationToken ct = default);
+    Task EsborrarDiaAsync(Guid anyAcademicId, DateOnly data, CancellationToken ct = default);
     Task<AnyAcademic> AfegirAnyAcademicAsync(AnyAcademic any, CancellationToken ct = default);
     Task ActualitzarAnyAcademicAsync(AnyAcademic any, CancellationToken ct = default);
     Task<int> SaveChangesAsync(CancellationToken ct = default);
