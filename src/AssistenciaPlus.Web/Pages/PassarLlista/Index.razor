@@ -78,6 +78,75 @@ else if (_fase == Fase.SeleccionarFranja)
         Selecciona la franja horària — <strong>@_grupSeleccionat!.NomComplet</strong>
     </MudText>
 
+    <!-- Opcions de període complet -->
+    @if (FranjesMati().Count > 1 || FranjesTarda().Count > 1)
+    {
+        <MudText Typo="Typo.overline" Style="color:#718096" Class="mb-2 d-block">
+            Passar tot el període
+        </MudText>
+        <MudGrid Class="mb-4">
+            @if (FranjesMati().Count > 1)
+            {
+                var fm = FranjesMati();
+                var matiPassat = fm.All(f => _registresAvui.Any(r => r.FranjaHorariaId == f.Id));
+                <MudItem xs="12" sm="6">
+                    <MudCard Elevation="@(matiPassat ? 1 : 3)"
+                        Class="@($"cursor-pointer franja-card{(matiPassat ? " franja-feta" : "")}")"
+                        Style="border-left:4px solid #3B82F6"
+                        @onclick="() => SeleccionarPeriode(true)">
+                        <MudCardContent Class="pa-4">
+                            <div class="d-flex align-center justify-space-between">
+                                <div>
+                                    <MudText Typo="Typo.h6" Style="font-weight:700;color:#1D4ED8">
+                                        Tot el matí
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Style="color:#718096">
+                                        @fm.First().HoraInici.ToString("HH\\:mm") –
+                                        @fm.Last().HoraFi.ToString("HH\\:mm") ·
+                                        @fm.Count franges
+                                    </MudText>
+                                </div>
+                                <MudIcon Icon="@(matiPassat ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.WbSunny)"
+                                    Color="@(matiPassat ? Color.Success : Color.Primary)" Size="Size.Medium" />
+                            </div>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+            @if (FranjesTarda().Count > 1)
+            {
+                var ft = FranjesTarda();
+                var tardaPassada = ft.All(f => _registresAvui.Any(r => r.FranjaHorariaId == f.Id));
+                <MudItem xs="12" sm="6">
+                    <MudCard Elevation="@(tardaPassada ? 1 : 3)"
+                        Class="@($"cursor-pointer franja-card{(tardaPassada ? " franja-feta" : "")}")"
+                        Style="border-left:4px solid #F59E0B"
+                        @onclick="() => SeleccionarPeriode(false)">
+                        <MudCardContent Class="pa-4">
+                            <div class="d-flex align-center justify-space-between">
+                                <div>
+                                    <MudText Typo="Typo.h6" Style="font-weight:700;color:#92400E">
+                                        Tota la tarda
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Style="color:#718096">
+                                        @ft.First().HoraInici.ToString("HH\\:mm") –
+                                        @ft.Last().HoraFi.ToString("HH\\:mm") ·
+                                        @ft.Count franges
+                                    </MudText>
+                                </div>
+                                <MudIcon Icon="@(tardaPassada ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Brightness3)"
+                                    Color="@(tardaPassada ? Color.Success : Color.Warning)" Size="Size.Medium" />
+                            </div>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+        <MudText Typo="Typo.overline" Style="color:#718096" Class="mb-2 d-block">
+            O selecciona una franja concreta
+        </MudText>
+    }
+
     <MudGrid>
         @foreach (var franja in _franjes)
         {
@@ -122,10 +191,13 @@ else if (_fase == Fase.PassarLlista)
     <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-5">
         <div>
             <MudText Typo="Typo.h6" Style="font-weight:700">
-                @_grupSeleccionat!.NomComplet — @_franjaSeleccionada!.Nom
+                @_grupSeleccionat!.NomComplet — @_etiquetaFranja
             </MudText>
             <MudText Typo="Typo.body2" Style="color:#718096">
-                @_franjaSeleccionada.HorariDisplay · @_alumnes.Count alumnes
+                @(_franjasADesar.Count > 1
+                    ? $"{_franjasADesar.First().HoraInici:HH\\:mm} – {_franjasADesar.Last().HoraFi:HH\\:mm} · {_franjasADesar.Count} franges"
+                    : _franjaSeleccionada?.HorariDisplay ?? string.Empty)
+                · @_alumnes.Count alumnes
             </MudText>
         </div>
         @if (_grupSeleccionat.UsaModeFusteta)
@@ -240,6 +312,8 @@ else if (_fase == Fase.PassarLlista)
 
     private GrupModel? _grupSeleccionat;
     private FranjaHorariaModel? _franjaSeleccionada;
+    private List<FranjaHorariaModel> _franjasADesar = [];
+    private string _etiquetaFranja = string.Empty;
 
     private List<BreadcrumbItem> _breadcrumbs = [];
 
@@ -310,10 +384,31 @@ else if (_fase == Fase.PassarLlista)
     private async Task SeleccionarFranja(FranjaHorariaModel franja)
     {
         _franjaSeleccionada = franja;
+        _franjasADesar = [franja];
+        _etiquetaFranja = franja.Nom;
+        await CarregarFase3Async(franja.Id);
+    }
+
+    private async Task SeleccionarPeriode(bool esMati)
+    {
+        var franjesPeriode = _franjes
+            .Where(f => f.EsMati == esMati)
+            .OrderBy(f => f.Ordre)
+            .ToList();
+
+        _franjaSeleccionada = franjesPeriode.FirstOrDefault();
+        _franjasADesar = franjesPeriode;
+        _etiquetaFranja = esMati ? "Tot el matí" : "Tota la tarda";
+        await CarregarFase3Async(franjesPeriode.FirstOrDefault()?.Id ?? Guid.Empty);
+    }
+
+    private async Task CarregarFase3Async(Guid franjaReferencia)
+    {
         _alumnes = await AlumnesService.GetAlumnesPerGrupAsync(_grupSeleccionat!.Id);
 
-        // Carregar registre existent si n'hi ha
-        var registreExistent = _registresAvui.FirstOrDefault(r => r.FranjaHorariaId == franja.Id);
+        var registreExistent = franjaReferencia != Guid.Empty
+            ? _registresAvui.FirstOrDefault(r => r.FranjaHorariaId == franjaReferencia)
+            : null;
 
         _inputs = _alumnes.Select(a =>
         {
@@ -355,27 +450,35 @@ else if (_fase == Fase.PassarLlista)
         _desant = true;
         try
         {
-            var model = new DesarSessioModel
+            string? primerError = null;
+            foreach (var franja in _franjasADesar)
             {
-                GrupId = _grupSeleccionat!.Id,
-                FranjaHorariaId = _franjaSeleccionada!.Id,
-                Data = DateOnly.FromDateTime(DateTime.Today),
-                Observacio = _observacioSessio,
-                Assistencies = _inputs
-            };
+                var model = new DesarSessioModel
+                {
+                    GrupId = _grupSeleccionat!.Id,
+                    FranjaHorariaId = franja.Id,
+                    Data = DateOnly.FromDateTime(DateTime.Today),
+                    Observacio = _observacioSessio,
+                    Assistencies = _inputs
+                };
 
-            var (ok, _, error) = await AssistenciaService.DesarSessioAsync(model);
+                var (ok, _, error) = await AssistenciaService.DesarSessioAsync(model);
+                if (!ok) { primerError = error; break; }
+            }
 
-            if (ok)
+            if (primerError == null)
             {
-                Snackbar.Add("Assistència desada correctament", Severity.Success,
+                var missatge = _franjasADesar.Count > 1
+                    ? $"Assistència desada per a {_franjasADesar.Count} franges"
+                    : "Assistència desada correctament";
+                Snackbar.Add(missatge, Severity.Success,
                     config => config.Icon = Icons.Material.Filled.CheckCircle);
                 _registresAvui = await AssistenciaService.GetRegistresAsync(
-                    _grupSeleccionat.Id, DateOnly.FromDateTime(DateTime.Today));
+                    _grupSeleccionat!.Id, DateOnly.FromDateTime(DateTime.Today));
             }
             else
             {
-                Snackbar.Add(error ?? "Error al desar l'assistència", Severity.Error);
+                Snackbar.Add(primerError ?? "Error al desar l'assistència", Severity.Error);
             }
         }
         finally
@@ -391,6 +494,12 @@ else if (_fase == Fase.PassarLlista)
             await SignalR.AbandonarGrupAsync(_grupSeleccionat.Id);
     }
 
+    private List<FranjaHorariaModel> FranjesMati()
+        => _franjes.Where(f => f.EsMati).OrderBy(f => f.Ordre).ToList();
+
+    private List<FranjaHorariaModel> FranjesTarda()
+        => _franjes.Where(f => !f.EsMati).OrderBy(f => f.Ordre).ToList();
+
     private void ActualitzarBreadcrumbs()
     {
         _breadcrumbs =
@@ -400,7 +509,7 @@ else if (_fase == Fase.PassarLlista)
             new(_grupSeleccionat?.NomComplet ?? string.Empty,
                 null, _fase == Fase.SeleccionarFranja),
             .. (_fase == Fase.PassarLlista
-                ? [new BreadcrumbItem(_franjaSeleccionada?.Nom ?? string.Empty, null, true)]
+                ? [new BreadcrumbItem(_etiquetaFranja, null, true)]
                 : Array.Empty<BreadcrumbItem>())
         ];
     }
