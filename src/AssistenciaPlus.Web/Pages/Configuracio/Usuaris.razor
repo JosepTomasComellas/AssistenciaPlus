@@ -3,6 +3,7 @@
 @inject ConfiguracioService ConfiguracioService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject BreadcrumbService BreadcrumbService
 @using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>Usuaris — Configuració</PageTitle>
@@ -242,6 +243,10 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        BreadcrumbService.Set(
+            new("Inici", "/"),
+            new("Configuració", null, true),
+            new("Usuaris", null, true));
         await CarregarUsuarisAsync();
     }
 

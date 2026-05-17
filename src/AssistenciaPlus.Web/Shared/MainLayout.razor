@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject AuthService AuthService
 @inject IdiomesService Idiomes
+@inject BreadcrumbService Breadcrumbs
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -105,6 +106,11 @@
             <!-- Contingut principal -->
             <MudMainContent>
                 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4 pa-sm-6">
+                    @if (Breadcrumbs.Items.Count > 1)
+                    {
+                        <MudBreadcrumbs Items="Breadcrumbs.Items.ToList()"
+                            Class="px-0 pt-0 pb-3" Style="font-size:0.85rem" />
+                    }
                     @Body
                 </MudContainer>
             </MudMainContent>
@@ -123,11 +129,17 @@
     protected override async Task OnInitializedAsync()
     {
         Idiomes.IdiomaCanviat += OnIdiomaCanviat;
+        Breadcrumbs.OnChange += OnBreadcrumbsCanviat;
         _usuariActual = await AuthService.GetCurrentUserFromApiAsync();
     }
 
     public void Dispose()
-        => Idiomes.IdiomaCanviat -= OnIdiomaCanviat;
+    {
+        Idiomes.IdiomaCanviat -= OnIdiomaCanviat;
+        Breadcrumbs.OnChange -= OnBreadcrumbsCanviat;
+    }
+
+    private void OnBreadcrumbsCanviat() => InvokeAsync(StateHasChanged);
 
     private void OnIdiomaCanviat() => InvokeAsync(StateHasChanged);
 

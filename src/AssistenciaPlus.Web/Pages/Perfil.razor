@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @inject AuthService AuthService
 @inject ISnackbar Snackbar
+@inject BreadcrumbService BreadcrumbService
 
 <PageTitle>El meu perfil — AssistenciaPlus</PageTitle>
 
@@ -109,6 +110,9 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        BreadcrumbService.Set(
+            new("Inici", "/"),
+            new("El meu perfil", null, true));
         _usuari = await AuthService.GetCurrentUserAsync();
     }
 

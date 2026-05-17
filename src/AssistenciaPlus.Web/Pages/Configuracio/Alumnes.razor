@@ -4,6 +4,7 @@
 @inject AlumnesService AlumnesService
 @inject ConfiguracioService ConfiguracioService
 @inject ISnackbar Snackbar
+@inject BreadcrumbService BreadcrumbService
 @using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>Alumnes i grups — Configuració</PageTitle>
@@ -338,6 +339,10 @@
 
     protected override async Task OnInitializedAsync()
     {
+        BreadcrumbService.Set(
+            new("Inici", "/"),
+            new("Configuració", null, true),
+            new("Alumnes i grups", null, true));
         _grups = await ConfiguracioService.GetGrupsConfiguracioAsync();
         _cicles = await GrupService.GetCiclesAsync();
     }

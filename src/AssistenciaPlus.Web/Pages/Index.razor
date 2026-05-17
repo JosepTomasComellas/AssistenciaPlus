@@ -3,6 +3,7 @@
 @inject AuthService AuthService
 @inject GrupService GrupService
 @inject AssistenciaService AssistenciaService
+@inject BreadcrumbService BreadcrumbService
 
 <PageTitle>Inici — AssistenciaPlus</PageTitle>
 
@@ -161,6 +162,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        BreadcrumbService.Clear();
         var user = await AuthService.GetCurrentUserAsync();
         _nomUsuari = user?.Nom ?? string.Empty;
 

@@ -5,6 +5,7 @@
 @inject ConfiguracioService ConfiguracioService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@inject BreadcrumbService BreadcrumbService
 
 <PageTitle>Informes — AssistenciaPlus</PageTitle>
 
@@ -283,6 +284,9 @@ else if (_errorInforme != null)
 
     protected override async Task OnInitializedAsync()
     {
+        BreadcrumbService.Set(
+            new("Inici", "/"),
+            new("Informes", null, true));
         _grups = await GrupService.GetGrupsAsync();
         if (_grups.Count == 1)
             _grupSeleccionat = _grups[0].Id;

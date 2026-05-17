@@ -2,6 +2,7 @@
 @attribute [Authorize(Roles = "EquipDirectiu")]
 @inject ConfiguracioService ConfiguracioService
 @inject ISnackbar Snackbar
+@inject BreadcrumbService BreadcrumbService
 
 <PageTitle>Any acadèmic — Configuració</PageTitle>
 
@@ -360,6 +361,10 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        BreadcrumbService.Set(
+            new("Inici", "/"),
+            new("Configuració", null, true),
+            new("Any acadèmic", null, true));
         _anys = await ConfiguracioService.GetAnysAcademicsAsync();
         _cicles = await ConfiguracioService.GetCiclesAsync();
         _carregant = false;
