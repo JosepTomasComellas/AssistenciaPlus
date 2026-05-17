@@ -10,6 +10,9 @@ public class SignalRService : IAsyncDisposable
     private HubConnection? _hub;
 
     public event Action<string, string>? AssistenciaActualitzada;
+    public event Action? Reconnectant;
+    public event Action? Reconnectat;
+    public event Action? Desconnectat;
 
     public bool EstaConnectat => _hub?.State == HubConnectionState.Connected;
 
@@ -34,10 +37,14 @@ public class SignalRService : IAsyncDisposable
             .WithAutomaticReconnect()
             .Build();
 
-        _hub.On<string, string>("AttendanceUpdated", (sessionId, groupId) =>
+        _hub.On<string, string>("AssistenciaActualitzada", (franjaId, groupId) =>
         {
-            AssistenciaActualitzada?.Invoke(sessionId, groupId);
+            AssistenciaActualitzada?.Invoke(franjaId, groupId);
         });
+
+        _hub.Reconnecting += _ => { Reconnectant?.Invoke(); return Task.CompletedTask; };
+        _hub.Reconnected += _ => { Reconnectat?.Invoke(); return Task.CompletedTask; };
+        _hub.Closed += _ => { Desconnectat?.Invoke(); return Task.CompletedTask; };
 
         await _hub.StartAsync();
     }

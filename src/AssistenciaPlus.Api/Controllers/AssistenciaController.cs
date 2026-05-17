@@ -85,14 +85,12 @@ public class AssistenciaController : BaseApiController
 
         var registre = await _assistenciaService.DesarSessioCompletaAsync(dto, mestreId, ct);
 
-        // Notificació en temps real a l'equip directiu
+        // Notificació en temps real (event = "AssistenciaActualitzada", dos strings)
         await _hub.Clients.Group($"group:{dto.GrupId}")
-            .SendAsync("AssistenciaActualitzada", new
-            {
-                grupId = dto.GrupId,
-                franjaId = dto.FranjaHorariaId,
-                data = dto.Data.ToString("yyyy-MM-dd")
-            }, ct);
+            .SendAsync("AssistenciaActualitzada",
+                dto.FranjaHorariaId.ToString(),
+                dto.GrupId.ToString(),
+                ct);
 
         return Ok(ApiResponse<RegistreAssistenciaDto>.Ok(registre));
     }

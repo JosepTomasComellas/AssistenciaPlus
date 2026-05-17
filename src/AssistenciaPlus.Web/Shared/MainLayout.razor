@@ -18,7 +18,8 @@
                 </MudTooltip>
 
                 <!-- Logo i nom escola -->
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="ml-1">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="ml-1"
+                    Style="cursor:pointer" @onclick="@(() => Nav.NavigateTo("/"))">
                     <MudImage Src="https://agora.xtec.cat/escolamartamata-viladecans/wp-content/uploads/usu1599/2016/11/logomartamata.jpg"
                         Height="40" Alt="Escola Marta Mata"
                         Style="border-radius:4px;object-fit:contain;background:#fff;" />

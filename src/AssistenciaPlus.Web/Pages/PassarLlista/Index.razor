@@ -349,12 +349,36 @@ else if (_fase == Fase.PassarLlista)
         {
             await SignalR.ConnectarAsync();
             SignalR.AssistenciaActualitzada += OnAssistenciaActualitzada;
+            SignalR.Reconnectant += OnReconnectant;
+            SignalR.Reconnectat += OnReconnectat;
+            SignalR.Desconnectat += OnDesconnectat;
         }
         catch
         {
             // SignalR no és crític — si falla, la pàgina continua funcionant
         }
     }
+
+    private void OnReconnectant()
+        => InvokeAsync(() =>
+        {
+            Snackbar.Add("Connexió perduda. Reconnectant...",
+                Severity.Warning, c => { c.Icon = Icons.Material.Filled.WifiOff; c.VisibleStateDuration = 8000; });
+        });
+
+    private void OnReconnectat()
+        => InvokeAsync(() =>
+        {
+            Snackbar.Add("Connexió restaurada",
+                Severity.Success, c => c.Icon = Icons.Material.Filled.Wifi);
+        });
+
+    private void OnDesconnectat()
+        => InvokeAsync(() =>
+        {
+            Snackbar.Add("Sense connexió en temps real. Recarrega la pàgina si cal.",
+                Severity.Error, c => { c.Icon = Icons.Material.Filled.WifiOff; c.VisibleStateDuration = 12000; });
+        });
 
     private void OnAssistenciaActualitzada(string sessionId, string groupId)
     {
@@ -489,6 +513,9 @@ else if (_fase == Fase.PassarLlista)
     public async ValueTask DisposeAsync()
     {
         SignalR.AssistenciaActualitzada -= OnAssistenciaActualitzada;
+        SignalR.Reconnectant -= OnReconnectant;
+        SignalR.Reconnectat -= OnReconnectat;
+        SignalR.Desconnectat -= OnDesconnectat;
         if (_grupSeleccionat != null)
             await SignalR.AbandonarGrupAsync(_grupSeleccionat.Id);
     }
