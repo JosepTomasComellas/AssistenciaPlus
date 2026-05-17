@@ -80,6 +80,23 @@ public class AuthService
         return JsonSerializer.Deserialize<UsuariModel>(json, _jsonOptions);
     }
 
+    /// <summary>Obté les dades fresques de l'usuari autenticat des de l'API i actualitza el localStorage.</summary>
+    public async Task<UsuariModel?> GetCurrentUserFromApiAsync()
+    {
+        try
+        {
+            var result = await _http.GetFromJsonAsync<ApiResponse<UsuariModel>>("auth/jo", _jsonOptions);
+            if (result?.Success == true && result.Data != null)
+            {
+                await _localStorage.SetItemAsStringAsync("user_info",
+                    JsonSerializer.Serialize(result.Data));
+                return result.Data;
+            }
+        }
+        catch { }
+        return await GetCurrentUserAsync();
+    }
+
     public async Task<string?> GetTokenAsync()
         => await _localStorage.GetItemAsStringAsync("jwt_token");
 

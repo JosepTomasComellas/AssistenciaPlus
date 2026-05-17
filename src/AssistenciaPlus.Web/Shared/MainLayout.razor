@@ -54,20 +54,23 @@
                     <MudMenu AnchorOrigin="Origin.BottomRight"
                         TransformOrigin="Origin.TopRight">
                         <ActivatorContent Context="_">
-                            @if (!string.IsNullOrEmpty(_usuariActual?.FotoPath))
-                            {
-                                <img src="@_usuariActual.FotoPath" alt=""
-                                    style="width:36px;height:36px;border-radius:50%;object-fit:cover;cursor:pointer;border:2px solid rgba(255,255,255,0.5)" />
-                            }
-                            else
-                            {
-                                <MudAvatar Color="Color.Secondary" Size="Size.Small"
-                                    Style="cursor:pointer;font-size:0.75rem;font-weight:700;border:2px solid rgba(255,255,255,0.5)">
-                                    @(_usuariActual?.NomComplet is { Length: > 0 } nom
-                                        ? nom[..Math.Min(2, nom.Length)]
-                                        : "?")
-                                </MudAvatar>
-                            }
+                            <MudButton Variant="Variant.Text" Color="Color.Inherit"
+                                Style="min-width:0;padding:2px;border-radius:50%;overflow:hidden">
+                                @if (!string.IsNullOrEmpty(_usuariActual?.FotoPath))
+                                {
+                                    <img src="@_usuariActual.FotoPath" alt=""
+                                        style="width:34px;height:34px;border-radius:50%;object-fit:cover;display:block;border:2px solid rgba(255,255,255,0.5)" />
+                                }
+                                else
+                                {
+                                    <MudAvatar Color="Color.Secondary" Size="Size.Small"
+                                        Style="font-size:0.75rem;font-weight:700;border:2px solid rgba(255,255,255,0.5)">
+                                        @(_usuariActual?.NomComplet is { Length: > 0 } nom
+                                            ? nom[..Math.Min(2, nom.Length)]
+                                            : "?")
+                                    </MudAvatar>
+                                }
+                            </MudButton>
                         </ActivatorContent>
                         <ChildContent>
                             <MudMenuItem Icon="@Icons.Material.Filled.Person"
@@ -120,7 +123,7 @@
     protected override async Task OnInitializedAsync()
     {
         Idiomes.IdiomaCanviat += OnIdiomaCanviat;
-        _usuariActual = await AuthService.GetCurrentUserAsync();
+        _usuariActual = await AuthService.GetCurrentUserFromApiAsync();
     }
 
     public void Dispose()
