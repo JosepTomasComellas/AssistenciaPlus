@@ -1,3 +1,4 @@
+using AssistenciaPlus.Api.Helpers;
 using AssistenciaPlus.Application.Common;
 using AssistenciaPlus.Application.DTOs;
 using AssistenciaPlus.Application.Interfaces;
@@ -18,15 +19,21 @@ public class AuthController : BaseApiController
 {
     private readonly IUsuariRepository _usuariRepo;
     private readonly IConfiguration _config;
+    private readonly IWebHostEnvironment _env;
     private readonly ILogger<AuthController> _logger;
+
+    private static readonly string[] _mimesAcceptats = ["image/jpeg", "image/png", "image/webp"];
+    private const long MidaMaxima = 2 * 1024 * 1024;
 
     public AuthController(
         IUsuariRepository usuariRepo,
         IConfiguration config,
+        IWebHostEnvironment env,
         ILogger<AuthController> logger)
     {
         _usuariRepo = usuariRepo;
         _config = config;
+        _env = env;
         _logger = logger;
     }
 
@@ -93,6 +100,46 @@ public class AuthController : BaseApiController
         if (usuari == null) return NotFound(ApiResponse<UsuariDto>.Fail("Usuari no trobat"));
 
         return Ok(ApiResponse<UsuariDto>.Ok(MaparUsuari(usuari)));
+    }
+
+    /// <summary>Puja o substitueix la foto de perfil de l'usuari autenticat.</summary>
+    [HttpPut("foto")]
+    [Authorize]
+    [RequestSizeLimit(2 * 1024 * 1024 + 4096)]
+    public async Task<ActionResult<ApiResponse<string>>> PujarFotoPerfil(
+        IFormFile foto, CancellationToken ct)
+    {
+        if (foto is null || foto.Length == 0)
+            return BadRequest(ApiResponse<string>.Fail("Cal seleccionar una imatge"));
+
+        if (foto.Length > MidaMaxima)
+            return BadRequest(ApiResponse<string>.Fail("La imatge no pot superar els 2 MB"));
+
+        if (!_mimesAcceptats.Contains(foto.ContentType.ToLower()))
+            return BadRequest(ApiResponse<string>.Fail("Format no acceptat. Usa JPEG, PNG o WebP"));
+
+        var usuariId = GetCurrentUserId();
+        var usuari = await _usuariRepo.GetByIdAsync(usuariId, ct);
+        if (usuari == null) return NotFound(ApiResponse<string>.Fail("Usuari no trobat"));
+
+        var dirFotos = Path.Combine(_env.ContentRootPath, "uploads", "usuaris");
+        Directory.CreateDirectory(dirFotos);
+
+        foreach (var antic in Directory.GetFiles(dirFotos, $"{usuariId}.*"))
+        {
+            try { System.IO.File.Delete(antic); } catch (IOException) { }
+        }
+
+        var nomFitxer = $"{usuariId}.jpg";
+        using var stream = foto.OpenReadStream();
+        await FotoHelper.ResitzarIGuardarAsync(stream, Path.Combine(dirFotos, nomFitxer), ct);
+
+        var versio = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        usuari.FotoPath = $"/uploads/usuaris/{nomFitxer}?v={versio}";
+        await _usuariRepo.ActualitzarAsync(usuari, ct);
+        await _usuariRepo.SaveChangesAsync(ct);
+
+        return Ok(ApiResponse<string>.Ok(usuari.FotoPath));
     }
 
     // ── Helpers ─────────────────────────────────────────────

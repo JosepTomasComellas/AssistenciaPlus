@@ -2,6 +2,7 @@ using AssistenciaPlus.Web.Auth;
 using AssistenciaPlus.Web.Models;
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Forms;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -83,6 +84,7 @@ public class AuthService
     /// <summary>Obté les dades fresques de l'usuari autenticat des de l'API i actualitza el localStorage.</summary>
     public async Task<UsuariModel?> GetCurrentUserFromApiAsync()
     {
+        await InitializeAsync(); // Garantir que el token és al header
         try
         {
             var result = await _http.GetFromJsonAsync<ApiResponse<UsuariModel>>("auth/jo", _jsonOptions);
@@ -95,6 +97,31 @@ public class AuthService
         }
         catch { }
         return await GetCurrentUserAsync();
+    }
+
+    /// <summary>Puja o substitueix la foto de perfil de l'usuari autenticat.</summary>
+    public async Task<(bool Ok, string? FotoPath, string? Error)> PujarFotoPerfilAsync(IBrowserFile fitxer)
+    {
+        try
+        {
+            using var contingut = new MultipartFormDataContent();
+            var stream = fitxer.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024 + 1024);
+            using var streamContent = new StreamContent(stream);
+            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(fitxer.ContentType);
+            contingut.Add(streamContent, "foto", fitxer.Name);
+
+            var response = await _http.PutAsync("auth/foto", contingut);
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<string>>(_jsonOptions);
+
+            if (result?.Success == true && result.Data != null)
+                return (true, result.Data, null);
+
+            return (false, null, result?.Error ?? "Error al pujar la foto");
+        }
+        catch
+        {
+            return (false, null, "No s'ha pogut pujar la foto. Comprova la connexió.");
+        }
     }
 
     public async Task<string?> GetTokenAsync()

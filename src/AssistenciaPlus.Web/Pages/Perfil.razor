@@ -3,6 +3,7 @@
 @inject AuthService AuthService
 @inject ISnackbar Snackbar
 @inject BreadcrumbService BreadcrumbService
+@using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>El meu perfil — AssistenciaPlus</PageTitle>
 
@@ -20,16 +21,45 @@ else
         <MudItem xs="12" md="5">
             <MudPaper Elevation="1" Class="pa-6" Style="border-radius:12px">
                 <div class="d-flex flex-column align-center mb-5">
-                    <MudAvatar Color="Color.Primary" Size="Size.Large"
-                        Style="width:80px;height:80px;font-size:1.8rem;font-weight:700;margin-bottom:16px">
-                        @_usuari.NomComplet[..Math.Min(2, _usuari.NomComplet.Length)]
-                    </MudAvatar>
+                    @if (!string.IsNullOrEmpty(_usuari.FotoPath))
+                    {
+                        <img src="@_usuari.FotoPath" alt=""
+                            style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:12px;border:3px solid #E2E8F0" />
+                    }
+                    else
+                    {
+                        <MudAvatar Color="Color.Primary" Size="Size.Large"
+                            Style="width:80px;height:80px;font-size:1.8rem;font-weight:700;margin-bottom:12px">
+                            @_usuari.NomComplet[..Math.Min(2, _usuari.NomComplet.Length)]
+                        </MudAvatar>
+                    }
                     <MudText Typo="Typo.h5" Style="font-weight:700">
                         @_usuari.NomComplet
                     </MudText>
                     <MudChip T="string" Color="Color.Primary" Size="Size.Small" Class="mt-1">
                         @GetRolText(_usuari.Rol)
                     </MudChip>
+                    <div class="mt-3 d-flex flex-column align-center">
+                        @if (!_pujantFoto)
+                        {
+                            <InputFile id="inputFotoPerfil" OnChange="PujarFotoAsync"
+                                accept="image/jpeg,image/png,image/webp"
+                                style="display:none" />
+                        }
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                            StartIcon="@Icons.Material.Filled.PhotoCamera"
+                            HtmlTag="label" for="inputFotoPerfil"
+                            Disabled="_pujantFoto">
+                            @if (_pujantFoto)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                            }
+                            Canviar foto
+                        </MudButton>
+                        <MudText Typo="Typo.caption" Style="color:#A0AEC0;margin-top:4px">
+                            JPEG, PNG o WebP · màx. 2 MB
+                        </MudText>
+                    </div>
                 </div>
 
                 <MudDivider Class="mb-4" />
@@ -79,7 +109,7 @@ else
                         Label="Nova contrasenya"
                         InputType="InputType.Password"
                         Variant="Variant.Outlined"
-                        HelperText="Mínim 8 caràcters" />
+                        HelperText="Mínim 12 caràcters" />
                     <MudTextField @bind-Value="_contrasenyaConfirm"
                         Label="Confirmar nova contrasenya"
                         InputType="InputType.Password"
@@ -107,13 +137,41 @@ else
     private string _contrasenyaNova = string.Empty;
     private string _contrasenyaConfirm = string.Empty;
     private bool _canviant;
+    private bool _pujantFoto;
 
     protected override async Task OnInitializedAsync()
     {
         BreadcrumbService.Set(
             new("Inici", "/"),
             new("El meu perfil", null, true));
-        _usuari = await AuthService.GetCurrentUserAsync();
+        _usuari = await AuthService.GetCurrentUserFromApiAsync();
+    }
+
+    private async Task PujarFotoAsync(InputFileChangeEventArgs e)
+    {
+        _pujantFoto = true;
+        try
+        {
+            var (ok, fotoPath, error) = await AuthService.PujarFotoPerfilAsync(e.File);
+            if (ok && fotoPath != null)
+            {
+                _usuari = _usuari! with { FotoPath = fotoPath };
+                await AuthService.GetCurrentUserFromApiAsync(); // Actualitza localStorage
+                Snackbar.Add("Foto actualitzada correctament", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error al pujar la foto", Severity.Error);
+            }
+        }
+        catch
+        {
+            Snackbar.Add("No s'ha pogut pujar la foto. Comprova la connexió.", Severity.Error);
+        }
+        finally
+        {
+            _pujantFoto = false;
+        }
     }
 
     private async Task CanviarContrasenyaAsync()
@@ -131,9 +189,9 @@ else
             return;
         }
 
-        if (_contrasenyaNova.Length < 8)
+        if (_contrasenyaNova.Length < 12)
         {
-            Snackbar.Add("La contrasenya ha de tenir mínim 8 caràcters", Severity.Warning);
+            Snackbar.Add("La contrasenya ha de tenir mínim 12 caràcters", Severity.Warning);
             return;
         }
 
