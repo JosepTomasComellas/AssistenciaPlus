@@ -39,7 +39,8 @@ public class AuthController : BaseApiController
     {
         var usuari = await _usuariRepo.GetPerEmailAsync(dto.Email, ct);
 
-        if (usuari == null || !BCrypt.Net.BCrypt.Verify(dto.Contrasenya, usuari.PasswordHash))
+        if (usuari == null || !BCrypt.Net.BCrypt.Verify(dto.Contrasenya, usuari.PasswordHash)
+            || !usuari.EsActiu)
         {
             _logger.LogWarning("Intent de login fallit per: {Email}", dto.Email);
             return Unauthorized(ApiResponse<LoginResponseDto>.Fail("Credencials incorrectes"));
@@ -50,7 +51,7 @@ public class AuthController : BaseApiController
         await _usuariRepo.SaveChangesAsync(ct);
 
         var token = GenerarTokenJwt(usuari);
-        var minutsExpiracio = int.Parse(_config["Jwt:ExpiryMinutes"] ?? "480");
+        var minutsExpiracio = int.TryParse(_config["Jwt:ExpiryMinutes"], out var m) ? m : 480;
 
         _logger.LogInformation("Login correcte: {Email} ({Rol})", usuari.Email, usuari.Rol);
 
@@ -111,7 +112,7 @@ public class AuthController : BaseApiController
             new Claim("idioma", usuari.Idioma)
         };
 
-        var expiracio = int.Parse(_config["Jwt:ExpiryMinutes"] ?? "480");
+        var expiracio = int.TryParse(_config["Jwt:ExpiryMinutes"], out var exp) ? exp : 480;
         var token = new JwtSecurityToken(
             issuer: _config["Jwt:Issuer"],
             audience: _config["Jwt:Audience"],

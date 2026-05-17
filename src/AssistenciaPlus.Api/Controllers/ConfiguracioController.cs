@@ -158,13 +158,18 @@ public class ConfiguracioController : ControllerBase
         if (!Enum.TryParse<RolUsuari>(dto.Rol, out var rol))
             return BadRequest(ApiResponse<UsuariDto>.Fail($"Rol invàlid: {dto.Rol}"));
 
+        var emailNormalitzat = dto.Email.ToLowerInvariant();
+        var existent = await _usuariRepo.GetPerEmailAsync(emailNormalitzat, ct);
+        if (existent != null)
+            return Conflict(ApiResponse<UsuariDto>.Fail("Ja existeix un usuari amb aquest correu electrònic"));
+
         var contrasenyaTemporal = GenerarContrasenyaTemporal();
         var usuari = new Usuari
         {
             Nom = dto.Nom,
             Cognom1 = dto.Cognom1,
             Cognom2 = dto.Cognom2,
-            Email = dto.Email.ToLowerInvariant(),
+            Email = emailNormalitzat,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(contrasenyaTemporal, workFactor: 12),
             Rol = rol,
             Idioma = dto.Idioma,
@@ -249,7 +254,8 @@ public class ConfiguracioController : ControllerBase
         using var stream = foto.OpenReadStream();
         await FotoHelper.ResitzarIGuardarAsync(stream, Path.Combine(dirFotos, nomFitxer), ct);
 
-        usuari.FotoPath = $"/uploads/usuaris/{nomFitxer}";
+        var versio = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        usuari.FotoPath = $"/uploads/usuaris/{nomFitxer}?v={versio}";
         await _usuariRepo.ActualitzarAsync(usuari, ct);
         await _usuariRepo.SaveChangesAsync(ct);
 

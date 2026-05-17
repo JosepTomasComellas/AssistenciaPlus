@@ -262,9 +262,12 @@
                                 </MudAvatar>
                             }
                             <div>
-                                <InputFile id="inputFotoAlumne" OnChange="PujarFotoAlumneAsync"
-                                    accept="image/jpeg,image/png,image/webp"
-                                    style="display:none" />
+                                @if (!_pujantFoto)
+                                {
+                                    <InputFile id="inputFotoAlumne" OnChange="PujarFotoAlumneAsync"
+                                        accept="image/jpeg,image/png,image/webp"
+                                        style="display:none" />
+                                }
                                 <MudButton Variant="Variant.Outlined" Size="Size.Small"
                                     StartIcon="@Icons.Material.Filled.PhotoCamera"
                                     OnClick="@(() => { })"
@@ -437,19 +440,29 @@
     {
         if (_editantAlumne == null) return;
         _pujantFoto = true;
-        var (ok, fotoPath, error) = await AlumnesService.PujarFotoAlumneAsync(_editantAlumne.Id, e.File);
-        if (ok && fotoPath != null)
+        try
         {
-            _editantAlumne = _editantAlumne with { FotoPath = fotoPath };
-            var idx = _alumnes.FindIndex(a => a.Id == _editantAlumne.Id);
-            if (idx >= 0) _alumnes[idx] = _editantAlumne;
-            Snackbar.Add("Foto actualitzada correctament", Severity.Success);
+            var (ok, fotoPath, error) = await AlumnesService.PujarFotoAlumneAsync(_editantAlumne.Id, e.File);
+            if (ok && fotoPath != null)
+            {
+                _editantAlumne = _editantAlumne with { FotoPath = fotoPath };
+                var idx = _alumnes.FindIndex(a => a.Id == _editantAlumne.Id);
+                if (idx >= 0) _alumnes[idx] = _editantAlumne;
+                Snackbar.Add("Foto actualitzada correctament", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error al pujar la foto", Severity.Error);
+            }
         }
-        else
+        catch
         {
-            Snackbar.Add(error ?? "Error al pujar la foto", Severity.Error);
+            Snackbar.Add("No s'ha pogut pujar la foto. Comprova la connexió.", Severity.Error);
         }
-        _pujantFoto = false;
+        finally
+        {
+            _pujantFoto = false;
+        }
     }
 
     private async Task DesarAlumneAsync()

@@ -116,6 +116,6 @@
     private async Task LogoutAsync()
     {
         await AuthService.LogoutAsync();
-        Nav.NavigateTo("/login", forceLoad: false);
+        Nav.NavigateTo("/login", forceLoad: true);
     }
 }

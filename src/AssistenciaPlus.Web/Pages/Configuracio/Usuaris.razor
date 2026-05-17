@@ -172,9 +172,12 @@ else
                                 </MudAvatar>
                             }
                             <div>
-                                <InputFile id="inputFotoUsuari" OnChange="PujarFotoUsuariAsync"
-                                    accept="image/jpeg,image/png,image/webp"
-                                    style="display:none" />
+                                @if (!_pujantFoto)
+                                {
+                                    <InputFile id="inputFotoUsuari" OnChange="PujarFotoUsuariAsync"
+                                        accept="image/jpeg,image/png,image/webp"
+                                        style="display:none" />
+                                }
                                 <MudButton Variant="Variant.Outlined" Size="Size.Small"
                                     StartIcon="@Icons.Material.Filled.PhotoCamera"
                                     HtmlTag="label" for="inputFotoUsuari"
@@ -352,19 +355,29 @@ else
     {
         if (_editantUsuari == null) return;
         _pujantFoto = true;
-        var (ok, fotoPath, error) = await ConfiguracioService.PujarFotoUsuariAsync(_editantUsuari.Id, e.File);
-        if (ok && fotoPath != null)
+        try
         {
-            _editantUsuari = _editantUsuari with { FotoPath = fotoPath };
-            var idx = _usuaris.FindIndex(u => u.Id == _editantUsuari.Id);
-            if (idx >= 0) _usuaris[idx] = _editantUsuari;
-            Snackbar.Add("Foto actualitzada correctament", Severity.Success);
+            var (ok, fotoPath, error) = await ConfiguracioService.PujarFotoUsuariAsync(_editantUsuari.Id, e.File);
+            if (ok && fotoPath != null)
+            {
+                _editantUsuari = _editantUsuari with { FotoPath = fotoPath };
+                var idx = _usuaris.FindIndex(u => u.Id == _editantUsuari.Id);
+                if (idx >= 0) _usuaris[idx] = _editantUsuari;
+                Snackbar.Add("Foto actualitzada correctament", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error al pujar la foto", Severity.Error);
+            }
         }
-        else
+        catch
         {
-            Snackbar.Add(error ?? "Error al pujar la foto", Severity.Error);
+            Snackbar.Add("No s'ha pogut pujar la foto. Comprova la connexió.", Severity.Error);
         }
-        _pujantFoto = false;
+        finally
+        {
+            _pujantFoto = false;
+        }
     }
 
     private async Task EnviarCredencials(UsuariModel u)

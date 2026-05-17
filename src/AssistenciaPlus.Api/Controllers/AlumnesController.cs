@@ -151,7 +151,8 @@ public class AlumnesController : BaseApiController
         using var stream = foto.OpenReadStream();
         await FotoHelper.ResitzarIGuardarAsync(stream, Path.Combine(dirFotos, nomFitxer), ct);
 
-        alumne.FotoPath = $"/uploads/alumnes/{nomFitxer}";
+        var versio = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        alumne.FotoPath = $"/uploads/alumnes/{nomFitxer}?v={versio}";
         await _alumneRepo.ActualitzarAsync(alumne, ct);
         await _alumneRepo.SaveChangesAsync(ct);
 

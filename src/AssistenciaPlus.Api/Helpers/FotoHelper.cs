@@ -16,17 +16,28 @@ public static class FotoHelper
     public static async Task<long> ResitzarIGuardarAsync(
         Stream origen, string rutaDesti, CancellationToken ct = default)
     {
-        using var imatge = await Image.LoadAsync(origen, ct);
+        Image imatge;
+        try
+        {
+            imatge = await Image.LoadAsync(origen, ct);
+        }
+        catch (Exception ex) when (ex is UnknownImageFormatException or InvalidImageContentException)
+        {
+            throw new ArgumentException("El fitxer no és una imatge vàlida o el format no està suportat.");
+        }
 
-        if (imatge.Width > MidaMaxPx || imatge.Height > MidaMaxPx)
-            imatge.Mutate(x => x.Resize(new ResizeOptions
-            {
-                Size = new Size(MidaMaxPx, MidaMaxPx),
-                Mode = ResizeMode.Max
-            }));
+        using (imatge)
+        {
+            if (imatge.Width > MidaMaxPx || imatge.Height > MidaMaxPx)
+                imatge.Mutate(x => x.Resize(new ResizeOptions
+                {
+                    Size = new Size(MidaMaxPx, MidaMaxPx),
+                    Mode = ResizeMode.Max
+                }));
 
-        var encoder = new JpegEncoder { Quality = QualitatiJpeg };
-        await imatge.SaveAsJpegAsync(rutaDesti, encoder, ct);
+            var encoder = new JpegEncoder { Quality = QualitatiJpeg };
+            await imatge.SaveAsJpegAsync(rutaDesti, encoder, ct);
+        }
 
         return new FileInfo(rutaDesti).Length;
     }
