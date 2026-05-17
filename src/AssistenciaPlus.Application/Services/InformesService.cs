@@ -60,7 +60,8 @@ public class InformesService : IInformesService
 
         var grups = await _grupRepo.GetPerCicleAsync(cicleId, anyActiu.Id, ct);
         var cicles = await _grupRepo.GetCiclesAsync(ct);
-        var cicle = cicles.FirstOrDefault(c => c.Id == cicleId);
+        var cicle = cicles.FirstOrDefault(c => c.Id == cicleId)
+            ?? throw new KeyNotFoundException($"Cicle {cicleId} no trobat");
 
         var (dataInici, dataFi) = GetRangMes(any, mes);
 
@@ -111,7 +112,8 @@ public class InformesService : IInformesService
 
         var grups = await _grupRepo.GetPerCicleAsync(cicleId, anyAcademicId, ct);
         var cicles = await _grupRepo.GetCiclesAsync(ct);
-        var cicle = cicles.FirstOrDefault(c => c.Id == cicleId);
+        var cicle = cicles.FirstOrDefault(c => c.Id == cicleId)
+            ?? throw new KeyNotFoundException($"Cicle {cicleId} no trobat");
 
         var (dataInici, dataFi) = GetRangTrimestre(anyAcademic, trimestre);
 

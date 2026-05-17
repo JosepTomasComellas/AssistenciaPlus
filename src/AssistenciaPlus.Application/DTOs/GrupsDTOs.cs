@@ -243,6 +243,6 @@ public record CanviContrasenyaDto
     [Required][StringLength(100, MinimumLength = 1)]
     public string ContrasenyaActual { get; init; } = string.Empty;
 
-    [Required][StringLength(100, MinimumLength = 8)]
+    [Required][StringLength(100, MinimumLength = 12)]
     public string ContrasenyaNova { get; init; } = string.Empty;
 }

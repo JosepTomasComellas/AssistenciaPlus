@@ -353,32 +353,35 @@ else if (_fase == Fase.PassarLlista)
     private async Task DesarSessioAsync()
     {
         _desant = true;
-
-        var model = new DesarSessioModel
+        try
         {
-            GrupId = _grupSeleccionat!.Id,
-            FranjaHorariaId = _franjaSeleccionada!.Id,
-            Data = DateOnly.FromDateTime(DateTime.Today),
-            Observacio = _observacioSessio,
-            Assistencies = _inputs
-        };
+            var model = new DesarSessioModel
+            {
+                GrupId = _grupSeleccionat!.Id,
+                FranjaHorariaId = _franjaSeleccionada!.Id,
+                Data = DateOnly.FromDateTime(DateTime.Today),
+                Observacio = _observacioSessio,
+                Assistencies = _inputs
+            };
 
-        var (ok, _, error) = await AssistenciaService.DesarSessioAsync(model);
+            var (ok, _, error) = await AssistenciaService.DesarSessioAsync(model);
 
-        if (ok)
-        {
-            Snackbar.Add("Assistència desada correctament", Severity.Success,
-                config => config.Icon = Icons.Material.Filled.CheckCircle);
-            // Recarregar registres
-            _registresAvui = await AssistenciaService.GetRegistresAsync(
-                _grupSeleccionat.Id, DateOnly.FromDateTime(DateTime.Today));
+            if (ok)
+            {
+                Snackbar.Add("Assistència desada correctament", Severity.Success,
+                    config => config.Icon = Icons.Material.Filled.CheckCircle);
+                _registresAvui = await AssistenciaService.GetRegistresAsync(
+                    _grupSeleccionat.Id, DateOnly.FromDateTime(DateTime.Today));
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error al desar l'assistència", Severity.Error);
+            }
         }
-        else
+        finally
         {
-            Snackbar.Add(error ?? "Error al desar l'assistència", Severity.Error);
+            _desant = false;
         }
-
-        _desant = false;
     }
 
     public async ValueTask DisposeAsync()

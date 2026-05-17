@@ -51,19 +51,35 @@
                         Class="d-none d-sm-flex">
                         @context.User.Identity?.Name
                     </MudText>
-                    <MudMenu Icon="@Icons.Material.Filled.AccountCircle"
-                        Color="Color.Inherit"
-                        AnchorOrigin="Origin.BottomRight"
+                    <MudMenu AnchorOrigin="Origin.BottomRight"
                         TransformOrigin="Origin.TopRight">
-                        <MudMenuItem Icon="@Icons.Material.Filled.Person"
-                            OnClick="@(() => Nav.NavigateTo("/perfil"))">
-                            El meu perfil
-                        </MudMenuItem>
-                        <MudDivider />
-                        <MudMenuItem Icon="@Icons.Material.Filled.Logout"
-                            OnClick="LogoutAsync">
-                            Tancar sessió
-                        </MudMenuItem>
+                        <ActivatorContent Context="_">
+                            @if (!string.IsNullOrEmpty(_usuariActual?.FotoPath))
+                            {
+                                <img src="@_usuariActual.FotoPath" alt=""
+                                    style="width:36px;height:36px;border-radius:50%;object-fit:cover;cursor:pointer;border:2px solid rgba(255,255,255,0.5)" />
+                            }
+                            else
+                            {
+                                <MudAvatar Color="Color.Secondary" Size="Size.Small"
+                                    Style="cursor:pointer;font-size:0.75rem;font-weight:700;border:2px solid rgba(255,255,255,0.5)">
+                                    @(_usuariActual?.NomComplet is { Length: > 0 } nom
+                                        ? nom[..Math.Min(2, nom.Length)]
+                                        : "?")
+                                </MudAvatar>
+                            }
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Person"
+                                OnClick="@(() => Nav.NavigateTo("/perfil"))">
+                                El meu perfil
+                            </MudMenuItem>
+                            <MudDivider />
+                            <MudMenuItem Icon="@Icons.Material.Filled.Logout"
+                                OnClick="LogoutAsync">
+                                Tancar sessió
+                            </MudMenuItem>
+                        </ChildContent>
                     </MudMenu>
                 </MudStack>
             </MudAppBar>
@@ -99,9 +115,13 @@
 
 @code {
     private bool _drawerOpen = true;
+    private UsuariModel? _usuariActual;
 
-    protected override void OnInitialized()
-        => Idiomes.IdiomaCanviat += OnIdiomaCanviat;
+    protected override async Task OnInitializedAsync()
+    {
+        Idiomes.IdiomaCanviat += OnIdiomaCanviat;
+        _usuariActual = await AuthService.GetCurrentUserAsync();
+    }
 
     public void Dispose()
         => Idiomes.IdiomaCanviat -= OnIdiomaCanviat;

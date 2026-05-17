@@ -30,7 +30,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
                 return _anonymous;
 
             var expiry = await _localStorage.GetItemAsync<DateTime>("token_expiry");
-            if (DateTime.UtcNow > expiry)
+            if (DateTime.UtcNow > DateTime.SpecifyKind(expiry, DateTimeKind.Utc))
             {
                 await ClearAsync();
                 return _anonymous;

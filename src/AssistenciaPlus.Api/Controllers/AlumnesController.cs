@@ -145,7 +145,9 @@ public class AlumnesController : BaseApiController
         Directory.CreateDirectory(dirFotos);
 
         foreach (var antic in Directory.GetFiles(dirFotos, $"{id}.*"))
-            System.IO.File.Delete(antic);
+        {
+            try { System.IO.File.Delete(antic); } catch (IOException) { }
+        }
 
         var nomFitxer = $"{id}.jpg";
         using var stream = foto.OpenReadStream();

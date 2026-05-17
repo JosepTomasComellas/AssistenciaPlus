@@ -17,9 +17,16 @@ public class AssistenciaService
     public async Task<List<RegistreAssistenciaModel>> GetRegistresAsync(Guid grupId, DateOnly data)
     {
         var dataStr = data.ToString("yyyy-MM-dd");
-        var result = await _http.GetFromJsonAsync<ApiResponse<List<RegistreAssistenciaModel>>>(
-            $"assistencia?grupId={grupId}&data={dataStr}", _opts);
-        return result?.Data ?? [];
+        try
+        {
+            var result = await _http.GetFromJsonAsync<ApiResponse<List<RegistreAssistenciaModel>>>(
+                $"assistencia?grupId={grupId}&data={dataStr}", _opts);
+            return result?.Data ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            return [];
+        }
     }
 
     /// <summary>
