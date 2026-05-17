@@ -133,11 +133,22 @@ public class OllamaService : IOllamaService
             };
 
             var response = await _httpClient.PostAsJsonAsync("/api/chat", request, ct);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Model {Model} no trobat a Ollama. Cal fer: ollama pull {Model}", _settings.Model, _settings.Model);
+                throw new InvalidOperationException($"El model '{_settings.Model}' no està descarregat. Executa: docker exec assistenciaplus_ollama ollama pull {_settings.Model}");
+            }
+
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadAsStringAsync(ct);
             using var doc = JsonDocument.Parse(json);
             return doc.RootElement.GetProperty("message").GetProperty("content").GetString() ?? "{}";
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
