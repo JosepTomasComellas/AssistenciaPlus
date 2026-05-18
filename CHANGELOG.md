@@ -10,11 +10,49 @@ Segueix [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Pendent d'implementar
-- Pàgines Blazor: Dashboard, Passar llista, Mode Fusteta Digital, Informes, Configuració
 - Importació d'alumnes des de fitxer Excel (format Esfera/Alexia)
 - Generació d'informes en PDF
 - Migració d'any acadèmic (còpia de grups per al curs nou)
-- Gestió de l'any acadèmic i grups via UI
+- **Ollama runner crash** (exit code -1): el model `llama3.2` s'ha descarregat però el procés d'inferència peta en carregar els tensors (probablement `vm.overcommit_memory` al LXC o fitxer corrupte — pendent de diagnosi)
+
+---
+
+## [0.4.0] - 2026-05-18
+
+### Afegit
+
+**Calendari escolar (`/configuracio/calendari`)**
+- Pàgina de gestió completa del calendari escolar per a l'Equip Directiu
+- Selector d'any acadèmic (permet gestionar calendaris d'anys anteriors i futurs)
+- Taula de dies especials (festius, no lectius, jornada intensiva) amb accions d'editar i esborrar
+- Diàleg d'afegir/editar dia amb datepicker (limitat al rang de l'any seleccionat), tipus i descripció
+- Confirmació de l'esborrat via `MudMessageBox`
+
+**Importació de calendari**
+- **ICS** (`POST /api/configuracio/calendari/{id}/importar-ics`): importació de fitxers `.ics` estàndard (VEVENT amb DTSTART/DTEND/SUMMARY), suporta line-folding i rangs de dates
+- **PDF via IA** (`POST /api/configuracio/calendari/{id}/importar-pdf`): extracció de text amb **PdfPig** + parsing del calendari amb **Ollama (llama3.2)** — retorna dies especials en JSON
+
+**Eliminació de dia de calendari**
+- `DELETE /api/configuracio/calendari/dia/{anyAcademicId}/{data}` — nou endpoint i `EsborrarDiaAsync` al repositori
+
+**Ollama (IA local)**
+- Nova mètode `ParsearCalendariPdfAsync` a `OllamaService`
+- Detecció de model no descarregat (HTTP 404 → `InvalidOperationException` amb missatge accionable)
+- `docker-compose.yml`: Ollama movida de la xarxa `backend` (internal) a nova xarxa `ai` (bridge amb internet) — resol el bloqueig DNS per descarregar models
+- DNS explícit (8.8.8.8 / 8.8.4.4) al contenidor Ollama
+- Entrypoint automàtic: `ollama serve & sleep 10 && ollama pull <model>` — descarrega el model automàticament al primer inici
+
+### Corregit
+- **Avatar capçalera**: imatge de l'usuari es mostrava fora de lloc i a tamany natural; corregit amb contenidor explícit `width:40px;height:40px` i overlay `position:absolute`
+- **Inicials de l'avatar**: si `_usuariActual` és null, fa fallback al nom del JWT (`context.User.Identity?.Name`)
+- **Logs de health check**: `/health` ara es registra a nivell `Verbose` (filtrat de la consola) — elimina el missatge de log cada 30 s
+- **Favicon**: substituït pel logo real de l'Escola Marta Mata
+
+### Canviat
+- `NavMenu.razor`: afegit enllaç "Calendari escolar" (`/configuracio/calendari`) al menú de configuració
+- `ApiModels.cs`: afegits `DiaCalendariModel` i `ActualitzarDiaCalendariModel`
+- `ConfiguracioService.cs`: afegits `GetCalendariAsync`, `ActualitzarDiaCalendariAsync`, `EsborrarDiaCalendariAsync`, `ImportarIcsAsync`, `ImportarPdfAsync`
+- `AssistenciaPlus.Api.csproj`: afegit paquet `PdfPig 0.1.9`
 
 ---
 

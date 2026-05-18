@@ -3,10 +3,10 @@
 > Aplicació web de gestió d'assistència per a una escola de primària catalana.
 
 [![CI/CD](https://github.com/JosepTomasComellas/AssistenciaPlus/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/JosepTomasComellas/AssistenciaPlus/actions)
-[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com)
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com)
 [![Blazor](https://img.shields.io/badge/Blazor-WASM-512BD4)](https://blazor.net)
 [![MudBlazor](https://img.shields.io/badge/UI-MudBlazor-594AE2)](https://mudblazor.com)
-[![Version](https://img.shields.io/badge/versió-0.2.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/versió-0.4.0-blue)](CHANGELOG.md)
 
 ---
 
@@ -19,7 +19,7 @@ AssistenciaPlus digitalitza el procés de passar llista en una escola de primàr
 - **Absències parcials**: motiu, si torna o no, propagació automàtica a la resta del dia
 - **Retards**: modal automàtic amb motiu i minuts
 - **Informes** mensuals i trimestrals per grup i per cicle (PDF + Excel + correu automàtic)
-- **Calendari escolar**: festius, jornades intensives i càlcul exacte de percentatges
+- **Calendari escolar**: gestió de festius i jornades via UI, importació ICS i PDF (IA local), càlcul exacte de percentatges
 
 ---
 
@@ -27,12 +27,20 @@ AssistenciaPlus digitalitza el procés de passar llista en una escola de primàr
 
 ```
 Internet (4446) ──► Router NAT ──► Nginx SSL (443) ──► Web Blazor WASM
-Xarxa interna (443) ─────────────────────────────────► API ASP.NET Core 8
+Xarxa interna (443) ─────────────────────────────────► API ASP.NET Core 10
                                                               │
                                                      PostgreSQL 16 + Redis 7
                                                               │
                                                         Ollama (IA local)
 ```
+
+### Xarxes Docker
+
+| Xarxa | Tipus | Serveis |
+|-------|-------|---------|
+| `frontend` | bridge | nginx, web, api |
+| `backend` | bridge internal | api, db, redis |
+| `ai` | bridge (internet) | api, ollama |
 
 ### Projectes .NET
 
@@ -40,7 +48,7 @@ Xarxa interna (443) ────────────────────
 |----------|-----|
 | `AssistenciaPlus.Domain` | Entitats del domini en català (model canònic) |
 | `AssistenciaPlus.Application` | Interfícies, DTOs, serveis de negoci |
-| `AssistenciaPlus.Infrastructure` | EF Core, repositoris, Redis, Email, Excel |
+| `AssistenciaPlus.Infrastructure` | EF Core, repositoris, Redis, Email, Excel, Ollama |
 | `AssistenciaPlus.API` | Controllers REST + SignalR Hub |
 | `AssistenciaPlus.Shared` | DTOs compartits amb el frontend |
 | `AssistenciaPlus.Web` | Frontend Blazor WASM + MudBlazor |
@@ -97,6 +105,8 @@ Credencials inicials (canviar al primer accés):
 - **Email:** `admin@escola.cat`
 - **Contrasenya:** `Admin1234!`
 
+> **Ollama (IA):** El model `llama3.2` es descarrega automàticament al primer inici del contenidor. Requereix accés a internet des del servidor (~2 GB).
+
 ---
 
 ## Estructura de fitxers
@@ -118,7 +128,7 @@ AssistenciaPlus/
 │   │   ├── Interfaces/
 │   │   ├── DTOs/
 │   │   └── Services/
-│   ├── AssistenciaPlus.Infrastructure/ # EF Core, repositoris, Email...
+│   ├── AssistenciaPlus.Infrastructure/ # EF Core, repositoris, Email, Ollama...
 │   ├── AssistenciaPlus.Api/            # Controllers REST + SignalR
 │   ├── AssistenciaPlus.Shared/         # DTOs compartits
 │   └── AssistenciaPlus.Web/            # Blazor WASM + MudBlazor
@@ -130,12 +140,13 @@ AssistenciaPlus/
 
 ---
 
-## Endpoints de l'API (v0.2.0)
+## Endpoints de l'API (v0.4.0)
 
 | Mètode | Ruta | Descripció |
 |--------|------|-----------|
 | `POST` | `/api/auth/login` | Autenticació (públic) |
 | `POST` | `/api/auth/canvi-contrasenya` | Canvi de contrasenya |
+| `GET` | `/api/auth/jo` | Dades de l'usuari autenticat |
 | `GET` | `/api/grups` | Grups del mestre autenticat |
 | `GET` | `/api/grups/franjes` | Franges horàries del dia |
 | `GET` | `/api/alumnes?grupId=` | Alumnes d'un grup |
@@ -145,8 +156,14 @@ AssistenciaPlus/
 | `GET` | `/api/informes/mensual/grup/{id}` | Informe mensual per grup |
 | `GET` | `/api/informes/trimestral/grup/{id}` | Informe trimestral per grup |
 | `POST` | `/api/informes/enviar-mensual` | Enviar informe per correu |
-| `GET` | `/api/configuracio/calendari/{anyId}` | Calendari escolar |
-| `PUT` | `/api/configuracio/calendari/dia` | Actualitzar dia del calendari |
+| `GET` | `/api/configuracio/calendari/{anyId}` | Dies especials del calendari |
+| `PUT` | `/api/configuracio/calendari/dia` | Afegir o actualitzar un dia |
+| `DELETE` | `/api/configuracio/calendari/dia/{anyId}/{data}` | Esborrar un dia |
+| `POST` | `/api/configuracio/calendari/{anyId}/importar-ics` | Importar fitxer ICS |
+| `POST` | `/api/configuracio/calendari/{anyId}/importar-pdf` | Importar PDF via IA (Ollama) |
+| `GET` | `/api/configuracio/anys-academics` | Llistar anys acadèmics |
+| `POST` | `/api/configuracio/anys-academics` | Crear any acadèmic |
+| `POST` | `/api/configuracio/anys-academics/{id}/activar` | Activar any acadèmic |
 | `GET` | `/api/configuracio/usuaris` | Gestió d'usuaris (EquipDirectiu) |
 
 Swagger disponible a `/swagger` en entorn de desenvolupament.
@@ -155,15 +172,16 @@ Swagger disponible a `/swagger` en entorn de desenvolupament.
 
 ## Tecnologies
 
-- **Frontend**: Blazor WebAssembly, MudBlazor, SignalR Client
-- **Backend**: ASP.NET Core 8, Entity Framework Core 8
+- **Frontend**: Blazor WebAssembly, MudBlazor 9.4, SignalR Client
+- **Backend**: ASP.NET Core 10, Entity Framework Core 10
 - **Base de dades**: PostgreSQL 16
 - **Cache / Sessions**: Redis 7
-- **IA local**: Ollama (llama3.2)
+- **IA local**: Ollama (llama3.2) — extracció de calendaris PDF en llenguatge natural
+- **Extracció PDF**: PdfPig 0.1.9
 - **Proxy**: Nginx 1.25 (SSL/TLS)
 - **Contenidors**: Docker Compose
 - **CI/CD**: GitHub Actions
-- **Logging**: Serilog (consola + fitxer rotatiu)
+- **Logging**: Serilog (consola + fitxer rotatiu, health checks filtrats)
 - **Autenticació**: JWT Bearer + BCrypt
 
 ---

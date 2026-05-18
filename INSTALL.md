@@ -4,12 +4,14 @@
 
 | Component | Versió mínima |
 |-----------|--------------|
-| Ubuntu | 22.04 LTS o superior |
+| Ubuntu / Debian | 22.04 LTS o superior |
 | Docker | 24.0+ |
 | Docker Compose | 2.20+ |
 | RAM | 4 GB (8 GB recomanat amb Ollama) |
-| Disc | 20 GB lliures |
+| Disc | 20 GB lliures (+ ~3 GB pel model Ollama) |
 | CPU | 2 cores (4+ amb Ollama) |
+
+> **Proxmox LXC**: si el servidor és un contenidor LXC, cal que tingui `nesting=1` activat per suportar Docker. Comprova que la xarxa del LXC permet connexions sortints a internet (necessari per descarregar el model Ollama).
 
 ---
 
@@ -41,7 +43,7 @@ sudo chown $USER:$USER /docker/AssistenciaPlus
 
 # Clonar
 cd /docker/AssistenciaPlus
-git clone https://github.com/TU_USUARI/AssistenciaPlus.git .
+git clone https://github.com/JosepTomasComellas/AssistenciaPlus.git .
 ```
 
 ---
@@ -66,6 +68,7 @@ nano .env
 | `JWT_SECRET` | Clau secreta JWT (mínim 32 caràcters) |
 | `SMTP_USER` | Compte Gmail |
 | `SMTP_PASSWORD` | App password de Gmail |
+| `OLLAMA_MODEL` | Model IA (per defecte: `llama3.2`) |
 
 ---
 
@@ -113,57 +116,61 @@ assistenciaplus_ollama   Up
 
 ---
 
-## 6. Configurar Ollama (IA local) - opcional
+## 6. Ollama (IA local)
+
+El contenidor Ollama **descarrega el model automàticament** al primer inici. El procés pot trigar uns minuts (~2 GB de descàrrega):
 
 ```bash
-# Descarregar el model (pot trigar uns minuts)
-docker exec assistenciaplus_ollama ollama pull llama3.2
+# Seguir el progrés de la descàrrega
+docker compose logs -f ollama
+```
 
-# Verificar que el model s'ha descarregat
+Quan la descàrrega finalitza, apareix al log:
+```
+pulled model llama3.2
+```
+
+Per verificar que el model és disponible:
+```bash
 docker exec assistenciaplus_ollama ollama list
 ```
 
-> **Nota**: Sense Ollama, totes les funcionalitats funcionen excepte les consultes en llenguatge natural.
+> **Sense Ollama**: totes les funcionalitats funcionen excepte la importació de calendaris PDF i les consultes en llenguatge natural.
 
----
+### Problemes de connectivitat Ollama
 
-## 7. Crear el primer usuari (Equip Directiu)
-
-Accedeix a la base de dades per crear el primer usuari administrador:
+Si el servidor no pot descarregar el model (timeout en connexions a `*.r2.cloudflarestorage.com`), comprova:
 
 ```bash
-# Accedir al contenidor de PostgreSQL
-docker exec -it assistenciaplus_db psql -U appuser -d assistenciaplus
-
-# Inserir usuari administrador (canvia els valors!)
-INSERT INTO "Users" ("Id", "FirstName", "LastName", "Email", "PasswordHash", "Role",
-                     "Language", "IsActive", "CreatedAt", "IsDeleted")
-VALUES (
-    gen_random_uuid(),
-    'Admin',
-    'Principal',
-    'admin@escola.cat',
-    -- Hash de 'Admin1234!' generat amb BCrypt (work factor 12)
-    '$2a$12$EXEMPLE_HASH_AQUI',
-    2,  -- Management
-    'ca',
-    true,
-    NOW(),
-    false
-);
-
-\q
+# Des del servidor, verificar accés a internet
+curl -I https://huggingface.co --connect-timeout 10
 ```
 
-> **Alternativa**: Un cop la API estigui en marxa, pots usar l'endpoint `POST /api/auth/register-initial` (disponible únicament si no hi ha cap usuari de rol Management a la base de dades).
+Si HuggingFace és accessible, es pot descarregar el model manualment i importar-lo:
+
+```bash
+# 1. Baixar el model GGUF al servidor (~2 GB)
+wget -O /tmp/llama3.2.gguf \
+  'https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf'
+
+# 2. Copiar al contenidor i importar
+docker cp /tmp/llama3.2.gguf assistenciaplus_ollama:/tmp/
+docker exec assistenciaplus_ollama sh -c \
+  "echo 'FROM /tmp/llama3.2.gguf' > /tmp/Modelfile && \
+   ollama create llama3.2 -f /tmp/Modelfile && \
+   rm /tmp/llama3.2.gguf"
+
+# 3. Netejar
+rm /tmp/llama3.2.gguf
+```
 
 ---
 
-## 8. Verificació
+## 7. Verificació
 
 ```bash
 # Comprovar l'API
-curl -k https://localhost:4446/health
+curl -k https://localhost/health
 
 # Comprovar logs
 docker compose logs --tail=50 api
@@ -172,9 +179,13 @@ docker compose logs --tail=20 nginx
 
 Accedeix a: **https://tuteapps.ddns.net:4446**
 
+Credencials inicials:
+- **Email:** `admin@escola.cat`
+- **Contrasenya:** `Admin1234!`
+
 ---
 
-## 9. Actualitzar l'aplicació
+## 8. Actualitzar l'aplicació
 
 ```bash
 cd /docker/AssistenciaPlus
@@ -189,9 +200,14 @@ docker compose up -d --build --no-deps api web
 docker image prune -f
 ```
 
+O fer servir l'alias de servidor (si està configurat):
+```bash
+redeploy
+```
+
 ---
 
-## 10. Còpies de seguretat
+## 9. Còpies de seguretat
 
 ### Backup de la base de dades
 
@@ -229,7 +245,7 @@ gunzip -c /docker/backups/assistenciaplus/db_20241201_020000.sql.gz \
 
 ---
 
-## 11. Monitoratge
+## 10. Monitoratge
 
 ```bash
 # Veure estat de tots els contenidors
@@ -282,6 +298,24 @@ docker compose logs api | head -100
 # Reiniciar únicament l'API
 docker compose restart api
 ```
+
+### Ollama runner crash (exit code -1)
+
+Si Ollama carrega el model però el runner peta amb `exit code -1`:
+
+```bash
+# Comprovar si l'OOM killer ha actuat
+dmesg | grep -iE "oom|killed" | tail -20
+
+# Comprovar l'ús de RAM actual
+free -h
+docker stats --no-stream
+
+# Provar amb context reduït
+docker exec -e OLLAMA_CONTEXT_LENGTH=2048 assistenciaplus_ollama ollama run llama3.2 "test"
+```
+
+Si el problema persisteix, comprova el límit de memòria del contenidor LXC al panell Proxmox.
 
 ---
 
