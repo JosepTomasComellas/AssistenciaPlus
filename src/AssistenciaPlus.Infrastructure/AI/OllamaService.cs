@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace AssistenciaPlus.Infrastructure.AI;
 
@@ -10,7 +11,7 @@ public class OllamaSettings
 {
     public string Url { get; set; } = "http://ollama:11434";
     public string Model { get; set; } = "llama3.2:1b";
-    public int TimeoutSeconds { get; set; } = 120;
+    public int TimeoutSeconds { get; set; } = 150;
 }
 
 /// <summary>
@@ -101,7 +102,7 @@ public class OllamaService : IOllamaService
             const string exempleJson =
                 """{"dies":[{"data":"YYYY-MM-DD","tipus":"festiu","descripcio":"nom"},{"data":"YYYY-MM-DD","tipus":"noLectiu","descripcio":"nom"}]}""";
             const string buit = """{"dies":[]}""";
-            var text = textPdf[..Math.Min(textPdf.Length, 4000)];
+            var text = ExtreureTextRellevant(textPdf);
 
             var prompt = $"""
                 Ets un sistema d'extracció de dades de calendaris escolars.
@@ -130,7 +131,7 @@ public class OllamaService : IOllamaService
                 model = _settings.Model,
                 messages = new[] { new { role = "user", content = prompt } },
                 stream = false,
-                options = new { temperature = 0.0, num_ctx = 2048, num_predict = 700 }
+                options = new { temperature = 0.0, num_ctx = 2048, num_predict = 400 }
             };
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_settings.TimeoutSeconds));
@@ -157,6 +158,42 @@ public class OllamaService : IOllamaService
             _logger.LogError(ex, "Error parsejant calendari PDF amb Ollama");
             return "{}";
         }
+    }
+
+    private static readonly string[] _termesCalendari = [
+        "gener","febrer","març","abril","maig","juny",
+        "juliol","agost","setembre","octubre","novembre","desembre",
+        "enero","febrero","marzo","mayo","junio","julio","agosto",
+        "septiembre","noviembre","diciembre",
+        "nadal","reis","pasqua","setmana santa","diada","festiu",
+        "no lectiu","vacances","pont","jornada","lliure","disposicio",
+        "festa","holiday","feriado","vacacion"
+    ];
+
+    private static string ExtreureTextRellevant(string textPdf, int maxChars = 2000)
+    {
+        var lines = textPdf.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var rellevants = new List<string>();
+
+        foreach (var line in lines)
+        {
+            var trim = line.Trim();
+            if (trim.Length < 4) continue;
+            var lower = trim.ToLowerInvariant();
+
+            if (_termesCalendari.Any(lower.Contains) ||
+                Regex.IsMatch(trim, @"\d{1,2}[/\-]\d{1,2}") ||
+                Regex.IsMatch(trim, @"\b(del|fins|al|des de)\b", RegexOptions.IgnoreCase))
+            {
+                rellevants.Add(trim);
+            }
+        }
+
+        if (rellevants.Count == 0)
+            return textPdf[..Math.Min(textPdf.Length, maxChars)];
+
+        var result = string.Join('\n', rellevants);
+        return result.Length > maxChars ? result[..maxChars] : result;
     }
 
     public async Task<bool> IsAvailableAsync(CancellationToken ct = default)
