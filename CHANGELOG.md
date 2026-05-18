@@ -10,10 +10,77 @@ Segueix [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Pendent d'implementar
-- Importació d'alumnes des de fitxer Excel (format Esfera/Alexia)
-- Generació d'informes en PDF
-- Migració d'any acadèmic (còpia de grups per al curs nou)
-- **Ollama runner crash** (exit code -1): el model `llama3.2` s'ha descarregat però el procés d'inferència peta en carregar els tensors (probablement `vm.overcommit_memory` al LXC o fitxer corrupte — pendent de diagnosi)
+- Fotos d'alumnes (integració amb Canva o pujada manual)
+- Consultes en llenguatge natural via IA (Ollama)
+
+---
+
+## [0.6.0] - 2026-05-18
+
+### Afegit
+
+**Traçabilitat avançada (`/configuracio/sessions`)**
+- 3 pestanyes: "Sessions", "Resum per alumne" i "Mestres sense llista"
+- **Filtres**: grup, mestre/a, rang de dates (inici/fi), franja horària
+- **Ordenació de columnes**: Data, Grup, Franja, Mestre, Creat (client/servidor)
+- **Columnes Creat i Modificat**: mostren la data de creació i última modificació del registre; "Modificat" apareix en taronja si la sessió ha estat editada posteriorment
+- **Resum per alumne**: taula amb total sessions, presents, absents i retards per alumne en el rang filtrat; xip vermell si ≥ 6 absències
+- **Mestres sense llista**: llistat de mestres que no han passat cap llista a l'any actiu; càrrega lazy en entrar a la pestanya
+
+**Dashboard d'inici (`/`)**
+- Bloc "Vista global del centre avui" visible només per a l'Equip Directiu
+- 4 KPIs: Grups amb llista, Grups sense llista, Sessions avui, Absències global
+- Panell d'alerta amb xips vermells dels grups que no han passat llista avui
+- Càrrega en segon pla (no bloqueja el render de la pàgina)
+
+**API — nous endpoints**
+- `GET /api/assistencia/sessions` — paginació i ordenació al servidor
+- `GET /api/assistencia/resum-alumnes` — agregació per alumne en rang filtrat
+- `GET /api/assistencia/mestres-sense-llista` — mestres sense registres a l'any actiu
+- `GET /api/assistencia/kpis-dashboard` — KPIs globals del dashboard
+
+**Temps real — presència d'usuaris editant**
+- Hub SignalR: `AnunciarEditant` i `AbandonarEdicio` — avisa els altres usuaris quan algú està editant una sessió
+- `SignalRService`: mètodes `AnunciarEditantAsync` / `AbandonarEdicioAsync` no fatals (try-catch si el hub no disposa del mètode)
+
+### Corregit
+- **i18n 404**: fitxers `ca.json` i `es.json` col·locats a `wwwroot/i18n/` (Blazor WASM només serveix estàtics des de `wwwroot/`)
+- **HubException `AnunciarEditant`**: `AttendanceHub.Middleware.cs` no estava inclòs al commit anterior; ara inclòs i els mètodes del servei fan try-catch per evitar crashes
+
+---
+
+## [0.5.0] - 2026-05-18
+
+### Afegit
+
+**PDF individual d'alumne** (`/configuracio/sessions`)
+- Generació de PDF individual per alumne amb el resum d'assistència
+
+**Ollama UX millorada**
+- Indicador de càrrega i missatge d'error accionable quan el model no és disponible
+
+**Mode Fusteta — resum de sessió**
+- Pantalla de resum al finalitzar la sessió en mode Fusteta Digital
+
+**Notificacions SignalR**
+- Sistema de notificacions en temps real via SignalR
+- `NotificacioService` i toast de `MudSnackbar` per a esdeveniments de grup
+
+**Grups — gestió de mestres autoritzats**
+- `GET /api/configuracio/grups/{id}/mestres` — llistar mestres d'un grup
+- `POST /api/configuracio/grups/{id}/mestres/{mestreId}` — afegir mestre
+- `DELETE /api/configuracio/grups/{id}/mestres/{mestreId}` — treure mestre
+
+**Grups — selector de tutor**
+- Camp "Tutor/a" al diàleg de crear/editar grup (EquipDirectiu)
+
+**Anys acadèmics — migració**
+- `POST /api/configuracio/anys-academics/{id}/migrar` — còpia de grups i alumnes a any nou
+- `ResultatMigracioModel` retornat amb estadístiques de la migració
+
+### Canviat
+- Taula d'anys acadèmics: columnes Estat i Activar fusionades en una sola
+- Peu de pàgina always-at-bottom amb `min-height: 100dvh`
 
 ---
 

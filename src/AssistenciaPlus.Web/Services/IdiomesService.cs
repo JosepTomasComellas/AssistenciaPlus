@@ -1,4 +1,5 @@
 using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Components;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -8,6 +9,7 @@ public class IdiomesService
 {
     private readonly HttpClient _http;
     private readonly ILocalStorageService _localStorage;
+    private readonly NavigationManager _nav;
 
     private Dictionary<string, JsonElement> _traduccions = [];
     private string _idioma = "ca";
@@ -17,10 +19,11 @@ public class IdiomesService
 
     public event Action? IdiomaCanviat;
 
-    public IdiomesService(HttpClient http, ILocalStorageService localStorage)
+    public IdiomesService(HttpClient http, ILocalStorageService localStorage, NavigationManager nav)
     {
         _http = http;
         _localStorage = localStorage;
+        _nav = nav;
     }
 
     public async Task InicialitzarAsync()
@@ -56,8 +59,8 @@ public class IdiomesService
     {
         try
         {
-            var json = await _http.GetFromJsonAsync<Dictionary<string, JsonElement>>(
-                $"i18n/{_idioma}.json");
+            var url = _nav.BaseUri + $"i18n/{_idioma}.json";
+            var json = await _http.GetFromJsonAsync<Dictionary<string, JsonElement>>(url);
             _traduccions = json ?? [];
         }
         catch

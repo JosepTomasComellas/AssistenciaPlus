@@ -6,7 +6,7 @@
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com)
 [![Blazor](https://img.shields.io/badge/Blazor-WASM-512BD4)](https://blazor.net)
 [![MudBlazor](https://img.shields.io/badge/UI-MudBlazor-594AE2)](https://mudblazor.com)
-[![Version](https://img.shields.io/badge/versió-0.4.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/versió-0.6.0-blue)](CHANGELOG.md)
 
 ---
 
@@ -140,7 +140,7 @@ AssistenciaPlus/
 
 ---
 
-## Endpoints de l'API (v0.4.0)
+## Endpoints de l'API (v0.6.0)
 
 | Mètode | Ruta | Descripció |
 |--------|------|-----------|
@@ -153,6 +153,10 @@ AssistenciaPlus/
 | `POST` | `/api/assistencia` | Desar sessió completa |
 | `POST` | `/api/assistencia/absencia-parcial` | Aplicar a resta del dia |
 | `GET` | `/api/assistencia/percentatge/{alumneId}` | % absència en rang |
+| `GET` | `/api/assistencia/sessions` | Traçabilitat de sessions (paginat, filtrat, ordenat) |
+| `GET` | `/api/assistencia/resum-alumnes` | Resum d'absències per alumne en rang filtrat |
+| `GET` | `/api/assistencia/mestres-sense-llista` | Mestres sense cap registre en l'any actiu |
+| `GET` | `/api/assistencia/kpis-dashboard` | KPIs del dashboard (grups amb/sense llista, absències) |
 | `GET` | `/api/informes/mensual/grup/{id}` | Informe mensual per grup |
 | `GET` | `/api/informes/trimestral/grup/{id}` | Informe trimestral per grup |
 | `POST` | `/api/informes/enviar-mensual` | Enviar informe per correu |
@@ -164,7 +168,10 @@ AssistenciaPlus/
 | `GET` | `/api/configuracio/anys-academics` | Llistar anys acadèmics |
 | `POST` | `/api/configuracio/anys-academics` | Crear any acadèmic |
 | `POST` | `/api/configuracio/anys-academics/{id}/activar` | Activar any acadèmic |
+| `POST` | `/api/configuracio/anys-academics/{id}/migrar` | Migrar grups i alumnes a any nou |
 | `GET` | `/api/configuracio/usuaris` | Gestió d'usuaris (EquipDirectiu) |
+| `GET` | `/api/configuracio/grups` | Gestió de grups (EquipDirectiu) |
+| `GET` | `/api/configuracio/grups/{id}/mestres` | Mestres autoritzats per a un grup |
 
 Swagger disponible a `/swagger` en entorn de desenvolupament.
 
