@@ -48,6 +48,22 @@
                     Style="font-size:0.7rem;font-weight:700;min-width:36px"
                     title="@(Idiomes.EsCatala ? "Canviar a castellà" : "Cambiar a català")" />
 
+                <!-- Botó IA (només EquipDirectiu) -->
+                <AuthorizeView Roles="EquipDirectiu" Context="iaCtx">
+                    <Authorized>
+                        <MudTooltip Text="Consulta en llengua natural (IA)">
+                            <MudButton Variant="Variant.Outlined"
+                                StartIcon="@Icons.Material.Filled.Psychology"
+                                Size="Size.Small"
+                                Style="color:white;border-color:rgba(255,255,255,0.5);font-weight:600;border-radius:20px;min-width:0;padding:4px 12px"
+                                OnClick="@(() => Nav.NavigateTo("/ia"))">
+                                <span class="d-none d-md-flex">Pregunta a l'IA</span>
+                                <span class="d-flex d-md-none">IA</span>
+                            </MudButton>
+                        </MudTooltip>
+                    </Authorized>
+                </AuthorizeView>
+
                 <!-- Campana de notificacions -->
                 <MudMenu @ref="_menuNotif" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
                     Dense="true" Style="max-width:340px">

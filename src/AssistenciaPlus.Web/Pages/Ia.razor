@@ -1,0 +1,264 @@
+@page "/ia"
+@attribute [Authorize(Roles = "EquipDirectiu")]
+@inject IaService IaService
+@inject ConfiguracioService ConfiguracioService
+@inject BreadcrumbService BreadcrumbService
+
+<PageTitle>Consulta IA — AssistenciaPlus</PageTitle>
+
+<div class="mb-5">
+    <div class="d-flex align-center gap-3 mb-1">
+        <MudIcon Icon="@Icons.Material.Filled.Psychology"
+            Style="font-size:2rem;color:#2E7D32" />
+        <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">
+            Consulta en llengua natural
+        </MudText>
+    </div>
+    <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
+        Fes preguntes sobre l'assistència en català. El model d'IA respon basant-se en les dades reals.
+    </MudText>
+</div>
+
+@if (_carregant)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (_anySeleccionat == Guid.Empty)
+{
+    <MudAlert Severity="Severity.Warning">No hi ha cap any acadèmic configurat.</MudAlert>
+}
+else
+{
+    <!-- Selector d'any -->
+    <MudPaper Elevation="0" Class="pa-3 mb-5" Style="border-radius:10px;border:1px solid #E2E8F0;max-width:320px">
+        <MudSelect T="Guid" Value="_anySeleccionat" Label="Any acadèmic"
+            Variant="Variant.Outlined" Dense="true" ValueChanged="AnyCanviatAsync">
+            @foreach (var any in _anys)
+            {
+                <MudSelectItem T="Guid" Value="@any.Id">
+                    @any.Nom @(any.EsActiu ? "✓" : "")
+                </MudSelectItem>
+            }
+        </MudSelect>
+    </MudPaper>
+
+    <div style="max-width:760px">
+
+        <!-- Exemples ràpids -->
+        <MudText Typo="Typo.caption" Style="color:#718096;text-transform:uppercase;letter-spacing:0.05em;font-weight:600" Class="mb-2">
+            Exemples de preguntes
+        </MudText>
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            @foreach (var ex in _exemples)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                    Color="Color.Primary" OnClick="@(() => UsarExemple(ex))"
+                    Style="cursor:pointer">
+                    @ex
+                </MudChip>
+            }
+        </div>
+
+        <!-- Camp de pregunta -->
+        <MudPaper Elevation="2" Class="pa-4" Style="border-radius:14px">
+            <MudTextField @bind-Value="_pregunta"
+                Label="Escriu la teva pregunta..."
+                Variant="Variant.Outlined" Lines="3" Class="mb-3"
+                Immediate="false"
+                OnKeyDown="TeclaEnteradaAsync" />
+
+            <div class="d-flex align-center gap-3">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                    Size="Size.Large"
+                    StartIcon="@Icons.Material.Filled.Send"
+                    OnClick="ConsultarAsync"
+                    Disabled="@(_consultant || string.IsNullOrWhiteSpace(_pregunta))">
+                    @if (_consultant)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Processant...</span>
+                    }
+                    else
+                    {
+                        <span>Consultar</span>
+                    }
+                </MudButton>
+                @if (_consultat)
+                {
+                    <MudButton Variant="Variant.Text" Color="Color.Default"
+                        Size="Size.Small" OnClick="NetejarAsync">
+                        Nova consulta
+                    </MudButton>
+                }
+            </div>
+        </MudPaper>
+
+        <!-- Resposta -->
+        @if (_consultant)
+        {
+            <MudPaper Elevation="1" Class="pa-5 mt-4" Style="border-radius:14px">
+                <div class="d-flex align-center gap-2 mb-3">
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Primary" />
+                    <MudText Typo="Typo.body2" Style="color:#718096">
+                        El model d'IA està analitzant les dades... (pot trigar fins a 2 minuts)
+                    </MudText>
+                </div>
+                @for (int i = 0; i < 4; i++)
+                {
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Class="mb-1"
+                        Style="@($"width:{85 - i * 10}%")" />
+                }
+            </MudPaper>
+        }
+        else if (_consultat)
+        {
+            @if (!_iaDisponible)
+            {
+                <MudAlert Severity="Severity.Warning" Class="mt-4" Style="border-radius:12px">
+                    <MudText Typo="Typo.body2" Style="font-weight:600">Servei d'IA no disponible</MudText>
+                    <MudText Typo="Typo.body2">
+                        El contenidor Ollama no respon. Comprova que s'està executant al servidor.
+                    </MudText>
+                </MudAlert>
+            }
+            else
+            {
+                <MudPaper Elevation="1" Class="pa-5 mt-4"
+                    Style="border-radius:14px;border-left:4px solid #2E7D32">
+                    <div class="d-flex align-center gap-2 mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.Psychology"
+                            Style="color:#2E7D32" Size="Size.Small" />
+                        <MudText Typo="Typo.subtitle2" Style="font-weight:700;color:#2E7D32">
+                            Resposta · @_preguntaFeta
+                        </MudText>
+                    </div>
+                    <MudDivider Class="mb-3" />
+                    <MudText Style="white-space:pre-wrap;line-height:1.8;font-size:0.97rem">@_resposta</MudText>
+                    <MudDivider Class="mt-4 mb-2" />
+                    <MudText Typo="Typo.caption" Style="color:#A0AEC0">
+                        Generat per Ollama · llama3.2 · Dades de l'any acadèmic seleccionat
+                    </MudText>
+                </MudPaper>
+            }
+        }
+
+        <!-- Historial de consultes -->
+        @if (_historial.Count > 0)
+        {
+            <div class="mt-6">
+                <MudText Typo="Typo.caption" Style="color:#718096;text-transform:uppercase;letter-spacing:0.05em;font-weight:600" Class="mb-2">
+                    Consultes anteriors
+                </MudText>
+                @foreach (var item in _historial.AsEnumerable().Reverse().Take(5))
+                {
+                    <MudPaper Elevation="0" Class="pa-3 mb-2"
+                        Style="border-radius:10px;border:1px solid #E2E8F0;cursor:pointer"
+                        @onclick="@(() => RecuperarHistorial(item))">
+                        <div class="d-flex align-center justify-space-between">
+                            <MudText Typo="Typo.body2" Style="font-weight:500">
+                                @item.Pregunta
+                            </MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.Restore"
+                                Size="Size.Small" Style="color:#A0AEC0" />
+                        </div>
+                    </MudPaper>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<AnyAcademicModel> _anys = [];
+    private Guid _anySeleccionat;
+    private bool _carregant = true;
+
+    private string _pregunta = string.Empty;
+    private string _preguntaFeta = string.Empty;
+    private string _resposta = string.Empty;
+    private bool _iaDisponible = true;
+    private bool _consultant = false;
+    private bool _consultat = false;
+
+    private record HistorialItem(string Pregunta, string Resposta);
+    private List<HistorialItem> _historial = [];
+
+    private static readonly string[] _exemples =
+    [
+        "Qui ha faltat més avui?",
+        "Quants alumnes han superat el 10% d'absències?",
+        "Quins grups han passat llista avui?",
+        "Quin grup té la taxa d'absència més alta?",
+        "Quin alumne acumula més retards?",
+        "Quants alumnes no han faltat cap dia?"
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        BreadcrumbService.Set(
+            new("Inici", "/"),
+            new("Consulta IA", null, true));
+
+        _anys = await ConfiguracioService.GetAnysAcademicsAsync();
+        var actiu = _anys.FirstOrDefault(a => a.EsActiu) ?? _anys.FirstOrDefault();
+        if (actiu != null) _anySeleccionat = actiu.Id;
+        _carregant = false;
+    }
+
+    private void UsarExemple(string exemple) => _pregunta = exemple;
+
+    private Task AnyCanviatAsync(Guid id)
+    {
+        _anySeleccionat = id;
+        return Task.CompletedTask;
+    }
+
+    private async Task TeclaEnteradaAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && e.CtrlKey)
+            await ConsultarAsync();
+    }
+
+    private async Task ConsultarAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_pregunta) || _anySeleccionat == Guid.Empty) return;
+
+        _preguntaFeta = _pregunta;
+        _consultant = true;
+        _consultat = false;
+        StateHasChanged();
+
+        var resultat = await IaService.ConsultarAsync(new ConsultaIaRequest
+        {
+            Pregunta = _preguntaFeta,
+            AnyAcademicId = _anySeleccionat
+        });
+
+        _resposta = resultat.Resposta;
+        _iaDisponible = resultat.EstaDisponible;
+        _consultant = false;
+        _consultat = true;
+
+        if (_iaDisponible && !string.IsNullOrWhiteSpace(_resposta))
+            _historial.Add(new(_preguntaFeta, _resposta));
+
+        StateHasChanged();
+    }
+
+    private void NetejarAsync()
+    {
+        _pregunta = string.Empty;
+        _preguntaFeta = string.Empty;
+        _resposta = string.Empty;
+        _consultat = false;
+    }
+
+    private void RecuperarHistorial(HistorialItem item)
+    {
+        _pregunta = item.Pregunta;
+        _resposta = item.Resposta;
+        _preguntaFeta = item.Pregunta;
+        _iaDisponible = true;
+        _consultat = true;
+    }
+}
