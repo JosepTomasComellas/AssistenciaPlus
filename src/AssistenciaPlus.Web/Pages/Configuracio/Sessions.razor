@@ -2,7 +2,6 @@
 @attribute [Authorize(Roles = "EquipDirectiu")]
 @inject ConfiguracioService ConfiguracioService
 @inject GrupService GrupService
-@inject ISnackbar Snackbar
 @inject BreadcrumbService BreadcrumbService
 
 <PageTitle>Traçabilitat — Configuració</PageTitle>
@@ -10,7 +9,7 @@
 <div class="mb-5">
     <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">Traçabilitat d'assistències</MudText>
     <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
-        Historial de sessions introduïdes: qui ha passat llista, quan i amb quants alumnes absents
+        Historial de sessions, resum per alumne i mestres sense activitat
     </MudText>
 </div>
 
@@ -24,13 +23,11 @@ else if (_anys.Count == 0)
 }
 else
 {
-    <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-radius:12px">
-
-        <!-- Fila 1: Any acadèmic + resum -->
-        <div class="d-flex align-center gap-4 flex-wrap mb-3">
-            <MudSelect T="Guid" Value="_anySeleccionat"
-                Label="Any acadèmic" Variant="Variant.Outlined"
-                Style="max-width:220px" Dense="true"
+    <!-- Filtre d'any acadèmic global -->
+    <MudPaper Elevation="0" Class="pa-3 mb-3" Style="border-radius:10px;border:1px solid #E2E8F0">
+        <div class="d-flex align-center gap-3 flex-wrap">
+            <MudSelect T="Guid" Value="_anySeleccionat" Label="Any acadèmic"
+                Variant="Variant.Outlined" Style="max-width:220px" Dense="true"
                 ValueChanged="AnyCanviatAsync">
                 @foreach (var any in _anys)
                 {
@@ -39,162 +36,297 @@ else
                     </MudSelectItem>
                 }
             </MudSelect>
-            <MudSpacer />
-            <MudText Typo="Typo.caption" Style="color:#718096">
-                @_total sessions · Pàgina @_pagina de @PaginesTotal
-            </MudText>
         </div>
+    </MudPaper>
 
-        <!-- Fila 2: Filtres -->
-        <div class="d-flex align-center gap-3 flex-wrap mb-3">
-            <!-- Grup -->
-            <MudSelect T="Guid?" Value="_filtreGrupId"
-                Label="Grup" Variant="Variant.Outlined"
-                Style="min-width:160px;max-width:200px" Dense="true" Clearable="true"
-                ValueChanged="FiltreGrupCanviatAsync">
-                <MudSelectItem T="Guid?" Value="@((Guid?)null)">Tots els grups</MudSelectItem>
-                @foreach (var g in _grups)
+    <MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true"
+        PanelClass="pa-4" Style="border-radius:12px">
+
+        <!-- ══════════════ TAB 1: SESSIONS ══════════════ -->
+        <MudTabPanel Text="Sessions" Icon="@Icons.Material.Filled.TableChart">
+
+            <!-- Filtres -->
+            <div class="d-flex align-center gap-3 flex-wrap mb-4">
+                <MudSelect T="Guid?" Value="_filtreGrupId" Label="Grup"
+                    Variant="Variant.Outlined" Style="min-width:150px;max-width:200px"
+                    Dense="true" Clearable="true" ValueChanged="FiltreCanviatAsync">
+                    <MudSelectItem T="Guid?" Value="@((Guid?)null)">Tots els grups</MudSelectItem>
+                    @foreach (var g in _grups)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)g.Id)">@g.NomComplet</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudSelect T="Guid?" Value="_filtreMestreId" Label="Mestre/a"
+                    Variant="Variant.Outlined" Style="min-width:150px;max-width:220px"
+                    Dense="true" Clearable="true" ValueChanged="FiltreMestreCanviatAsync">
+                    <MudSelectItem T="Guid?" Value="@((Guid?)null)">Tots els mestres</MudSelectItem>
+                    @foreach (var u in _usuaris)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)u.Id)">@u.NomComplet</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudSelect T="Guid?" Value="_filtreFranjaId" Label="Franja"
+                    Variant="Variant.Outlined" Style="min-width:130px;max-width:180px"
+                    Dense="true" Clearable="true" ValueChanged="FiltreFranjaCanviatAsync">
+                    <MudSelectItem T="Guid?" Value="@((Guid?)null)">Totes les franges</MudSelectItem>
+                    @foreach (var f in _franjes)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)f.Id)">@f.Nom</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudDatePicker Date="_filtreDataInici" Label="Des de"
+                    Variant="Variant.Outlined" DateFormat="dd/MM/yyyy" Dense="true"
+                    Style="max-width:150px" Clearable="true"
+                    DateChanged="FiltreDataIniciCanviada" />
+                <MudDatePicker Date="_filtreDataFi" Label="Fins a"
+                    Variant="Variant.Outlined" DateFormat="dd/MM/yyyy" Dense="true"
+                    Style="max-width:150px" Clearable="true"
+                    DateChanged="FiltreDataFiCanviada" />
+                @if (TeFiltresActius)
                 {
-                    <MudSelectItem T="Guid?" Value="@((Guid?)g.Id)">@g.NomComplet</MudSelectItem>
+                    <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small"
+                        StartIcon="@Icons.Material.Filled.FilterAltOff"
+                        OnClick="NetejarFiltresAsync">
+                        Netejar
+                    </MudButton>
                 }
-            </MudSelect>
+            </div>
 
-            <!-- Mestre/a -->
-            <MudSelect T="Guid?" Value="_filtreMestreId"
-                Label="Mestre/a" Variant="Variant.Outlined"
-                Style="min-width:160px;max-width:220px" Dense="true" Clearable="true"
-                ValueChanged="FiltreMestreCanviatAsync">
-                <MudSelectItem T="Guid?" Value="@((Guid?)null)">Tots els mestres</MudSelectItem>
-                @foreach (var u in _usuaris)
-                {
-                    <MudSelectItem T="Guid?" Value="@((Guid?)u.Id)">@u.NomComplet</MudSelectItem>
-                }
-            </MudSelect>
-
-            <!-- Franja horària -->
-            <MudSelect T="Guid?" Value="_filtreFranjaId"
-                Label="Franja" Variant="Variant.Outlined"
-                Style="min-width:140px;max-width:180px" Dense="true" Clearable="true"
-                ValueChanged="FiltreFranjaCanviatAsync">
-                <MudSelectItem T="Guid?" Value="@((Guid?)null)">Totes les franges</MudSelectItem>
-                @foreach (var f in _franjes)
-                {
-                    <MudSelectItem T="Guid?" Value="@((Guid?)f.Id)">@f.Nom</MudSelectItem>
-                }
-            </MudSelect>
-
-            <!-- Rang de dates -->
-            <MudDatePicker Date="_filtreDataInici"
-                Label="Des de" Variant="Variant.Outlined"
-                DateFormat="dd/MM/yyyy" Dense="true"
-                Style="max-width:160px" Clearable="true"
-                DateChanged="FiltreDataIniciCanviada" />
-            <MudDatePicker Date="_filtreDataFi"
-                Label="Fins a" Variant="Variant.Outlined"
-                DateFormat="dd/MM/yyyy" Dense="true"
-                Style="max-width:160px" Clearable="true"
-                DateChanged="FiltreDataFiCanviada" />
-
-            <!-- Botó netejar filtres -->
-            @if (TeFiltresActius)
-            {
-                <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small"
-                    StartIcon="@Icons.Material.Filled.FilterAltOff"
-                    OnClick="NetejarFiltresAsync">
-                    Netejar filtres
-                </MudButton>
-            }
-        </div>
-
-        @if (_sessions.Count == 0)
-        {
-            <MudAlert Severity="Severity.Info" Dense="true">
-                No hi ha sessions que coincideixin amb els filtres seleccionats.
-            </MudAlert>
-        }
-        else
-        {
-            <MudTable Items="_sessions" Hover="true" Dense="true" Striped="true">
+            <MudTable T="SessioTraçabilitatModel" ServerData="CarregarSessionsServerAsync"
+                @ref="_taula" Dense="true" Striped="true" Hover="true"
+                RowsPerPage="50">
                 <HeaderContent>
-                    <MudTh>Data</MudTh>
-                    <MudTh>Grup</MudTh>
-                    <MudTh>Franja</MudTh>
-                    <MudTh>Mestre/a</MudTh>
+                    <MudTh>
+                        <MudTableSortLabel T="SessioTraçabilitatModel"
+                            SortLabel="data" InitialDirection="SortDirection.Descending">
+                            Data
+                        </MudTableSortLabel>
+                    </MudTh>
+                    <MudTh>
+                        <MudTableSortLabel T="SessioTraçabilitatModel" SortLabel="grup">
+                            Grup
+                        </MudTableSortLabel>
+                    </MudTh>
+                    <MudTh>
+                        <MudTableSortLabel T="SessioTraçabilitatModel" SortLabel="franja">
+                            Franja
+                        </MudTableSortLabel>
+                    </MudTh>
+                    <MudTh>
+                        <MudTableSortLabel T="SessioTraçabilitatModel" SortLabel="mestre">
+                            Mestre/a
+                        </MudTableSortLabel>
+                    </MudTh>
                     <MudTh Style="text-align:center">Presents</MudTh>
                     <MudTh Style="text-align:center">Absents</MudTh>
                     <MudTh Style="text-align:center">Tard</MudTh>
                     <MudTh Style="text-align:center">Total</MudTh>
-                    <MudTh>Hora entrada</MudTh>
+                    <MudTh>
+                        <MudTableSortLabel T="SessioTraçabilitatModel" SortLabel="creatat">
+                            Creat
+                        </MudTableSortLabel>
+                    </MudTh>
+                    <MudTh>Modificat</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd>
-                        <MudText Style="font-weight:500">
-                            @context.Data.ToString("dd/MM/yyyy")
-                        </MudText>
-                    </MudTd>
+                    <MudTd><MudText Style="font-weight:500">@context.Data.ToString("dd/MM/yyyy")</MudText></MudTd>
                     <MudTd>@context.GrupNom</MudTd>
-                    <MudTd>
-                        <MudText Typo="Typo.caption">@context.FranjaNom</MudText>
-                    </MudTd>
+                    <MudTd><MudText Typo="Typo.caption">@context.FranjaNom</MudText></MudTd>
                     <MudTd>@context.MestreNomComplet</MudTd>
                     <MudTd Style="text-align:center">
                         @if (context.NombrePresents > 0)
                         {
-                            <MudChip T="string" Color="Color.Success" Size="Size.Small">
-                                @context.NombrePresents
-                            </MudChip>
+                            <MudChip T="string" Color="Color.Success" Size="Size.Small">@context.NombrePresents</MudChip>
                         }
-                        else
-                        {
-                            <MudText Typo="Typo.caption" Style="color:#A0AEC0">0</MudText>
-                        }
+                        else { <MudText Typo="Typo.caption" Style="color:#A0AEC0">0</MudText> }
                     </MudTd>
                     <MudTd Style="text-align:center">
                         @if (context.NombreAbsents > 0)
                         {
-                            <MudChip T="string" Color="Color.Error" Size="Size.Small">
-                                @context.NombreAbsents
-                            </MudChip>
+                            <MudChip T="string" Color="Color.Error" Size="Size.Small">@context.NombreAbsents</MudChip>
                         }
-                        else
-                        {
-                            <MudText Typo="Typo.caption" Style="color:#A0AEC0">0</MudText>
-                        }
+                        else { <MudText Typo="Typo.caption" Style="color:#A0AEC0">0</MudText> }
                     </MudTd>
                     <MudTd Style="text-align:center">
                         @if (context.NombreTard > 0)
                         {
-                            <MudChip T="string" Color="Color.Warning" Size="Size.Small">
-                                @context.NombreTard
-                            </MudChip>
+                            <MudChip T="string" Color="Color.Warning" Size="Size.Small">@context.NombreTard</MudChip>
+                        }
+                        else { <MudText Typo="Typo.caption" Style="color:#A0AEC0">0</MudText> }
+                    </MudTd>
+                    <MudTd Style="text-align:center"><MudText Typo="Typo.caption">@context.NombreTotal</MudText></MudTd>
+                    <MudTd>
+                        <MudText Typo="Typo.caption" Style="color:#718096">
+                            @context.CreatAt.ToLocalTime().ToString("dd/MM HH:mm")
+                        </MudText>
+                    </MudTd>
+                    <MudTd>
+                        @if (context.DegatAt != context.CreatAt)
+                        {
+                            <MudText Typo="Typo.caption" Style="color:#E65100">
+                                @context.DegatAt.ToLocalTime().ToString("dd/MM HH:mm")
+                            </MudText>
                         }
                         else
                         {
-                            <MudText Typo="Typo.caption" Style="color:#A0AEC0">0</MudText>
+                            <MudText Typo="Typo.caption" Style="color:#A0AEC0">—</MudText>
                         }
                     </MudTd>
-                    <MudTd Style="text-align:center">
-                        <MudText Typo="Typo.caption">@context.NombreTotal</MudText>
-                    </MudTd>
-                    <MudTd>
-                        <MudText Typo="Typo.caption" Style="color:#718096">
-                            @context.DegatAt.ToLocalTime().ToString("HH:mm")
-                        </MudText>
-                    </MudTd>
                 </RowTemplate>
+                <NoRecordsContent>
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="ma-2">
+                        No hi ha sessions que coincideixin amb els filtres seleccionats.
+                    </MudAlert>
+                </NoRecordsContent>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[]{25,50,100}" />
+                </PagerContent>
             </MudTable>
+        </MudTabPanel>
 
-            <!-- Paginació -->
-            @if (PaginesTotal > 1)
+        <!-- ══════════════ TAB 2: RESUM PER ALUMNE ══════════════ -->
+        <MudTabPanel Text="Resum per alumne" Icon="@Icons.Material.Filled.Person"
+            @onclick="CarregarResumAlumnesAsync">
+            <div class="d-flex align-center gap-3 flex-wrap mb-4">
+                <MudSelect T="Guid?" Value="_filtreGrupId" Label="Grup"
+                    Variant="Variant.Outlined" Style="min-width:150px;max-width:200px"
+                    Dense="true" Clearable="true" ValueChanged="FiltreGrupResumCanviatAsync">
+                    <MudSelectItem T="Guid?" Value="@((Guid?)null)">Tots els grups</MudSelectItem>
+                    @foreach (var g in _grups)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)g.Id)">@g.NomComplet</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudDatePicker Date="_filtreDataInici" Label="Des de"
+                    Variant="Variant.Outlined" DateFormat="dd/MM/yyyy" Dense="true"
+                    Style="max-width:150px" Clearable="true"
+                    DateChanged="FiltreDataIniciResumCanviada" />
+                <MudDatePicker Date="_filtreDataFi" Label="Fins a"
+                    Variant="Variant.Outlined" DateFormat="dd/MM/yyyy" Dense="true"
+                    Style="max-width:150px" Clearable="true"
+                    DateChanged="FiltreDataFiResumCanviada" />
+                <MudText Typo="Typo.caption" Style="color:#718096" Class="align-self-center">
+                    @_resumAlumnes.Count alumnes
+                </MudText>
+            </div>
+
+            @if (_carregantResum)
             {
-                <div class="d-flex justify-center mt-3">
-                    <MudPagination Count="PaginesTotal" Selected="_pagina"
-                        Color="Color.Primary" BoundaryCount="1" MiddleCount="3"
-                        SelectedChanged="PaginaCanviadaAsync" />
-                </div>
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
             }
-        }
-    </MudPaper>
+            else if (_resumAlumnes.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    No hi ha dades per als filtres seleccionats.
+                </MudAlert>
+            }
+            else
+            {
+                <MudTable Items="_resumAlumnes" Dense="true" Striped="true" Hover="true"
+                    SortLabel="Ordenar per" AllowUnsorted="false">
+                    <HeaderContent>
+                        <MudTh><MudTableSortLabel T="ResumAlumneModel" SortBy="@(x => x.AlumneNom)">Alumne</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel T="ResumAlumneModel" SortBy="@(x => x.GrupNom)">Grup</MudTableSortLabel></MudTh>
+                        <MudTh Style="text-align:center"><MudTableSortLabel T="ResumAlumneModel" SortBy="@(x => x.TotalSessions)">Sessions</MudTableSortLabel></MudTh>
+                        <MudTh Style="text-align:center"><MudTableSortLabel T="ResumAlumneModel" SortBy="@(x => x.TotalPresents)">Presents</MudTableSortLabel></MudTh>
+                        <MudTh Style="text-align:center"><MudTableSortLabel T="ResumAlumneModel" SortBy="@(x => x.TotalAbsents)" InitialDirection="SortDirection.Descending">Absents</MudTableSortLabel></MudTh>
+                        <MudTh Style="text-align:center"><MudTableSortLabel T="ResumAlumneModel" SortBy="@(x => x.TotalTard)">Tard</MudTableSortLabel></MudTh>
+                        <MudTh Style="text-align:center">% Absència</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd><MudText Style="font-weight:500">@context.AlumneNom</MudText></MudTd>
+                        <MudTd><MudText Typo="Typo.caption">@context.GrupNom</MudText></MudTd>
+                        <MudTd Style="text-align:center"><MudText Typo="Typo.caption">@context.TotalSessions</MudText></MudTd>
+                        <MudTd Style="text-align:center">
+                            <MudChip T="string" Color="Color.Success" Size="Size.Small">@context.TotalPresents</MudChip>
+                        </MudTd>
+                        <MudTd Style="text-align:center">
+                            @if (context.TotalAbsents > 0)
+                            {
+                                var color = context.TotalAbsents >= 6 ? Color.Error : Color.Warning;
+                                <MudChip T="string" Color="@color" Size="Size.Small">@context.TotalAbsents</MudChip>
+                            }
+                            else { <MudText Typo="Typo.caption" Style="color:#A0AEC0">0</MudText> }
+                        </MudTd>
+                        <MudTd Style="text-align:center">
+                            @if (context.TotalTard > 0)
+                            {
+                                <MudChip T="string" Color="Color.Warning" Size="Size.Small">@context.TotalTard</MudChip>
+                            }
+                            else { <MudText Typo="Typo.caption" Style="color:#A0AEC0">0</MudText> }
+                        </MudTd>
+                        <MudTd Style="text-align:center">
+                            @{
+                                var pct = context.TotalSessions > 0
+                                    ? Math.Round((double)context.TotalAbsents / context.TotalSessions * 100, 1)
+                                    : 0;
+                                var pctColor = pct >= 20 ? "#C62828" : pct >= 10 ? "#F57F17" : "#718096";
+                            }
+                            <MudText Typo="Typo.caption" Style="@($"color:{pctColor};font-weight:600")">
+                                @pct%
+                            </MudText>
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager PageSizeOptions="new int[]{25,50,100}" />
+                    </PagerContent>
+                </MudTable>
+            }
+        </MudTabPanel>
+
+        <!-- ══════════════ TAB 3: MESTRES SENSE LLISTA ══════════════ -->
+        <MudTabPanel Text="Mestres sense llista" Icon="@Icons.Material.Filled.PersonOff"
+            @onclick="CarregarMestresSenseLlistaAsync">
+            @if (_carregantMestres)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Style="color:#718096" Class="mb-3">
+                    Usuaris actius que <strong>mai han passat llista</strong> durant l'any acadèmic seleccionat.
+                </MudText>
+                @if (_mestresSenseLlista.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Success" Dense="true">
+                        Tots els usuaris actius han passat llista almenys una vegada aquest any.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudTable Items="_mestresSenseLlista" Dense="true" Striped="true" Hover="true">
+                        <HeaderContent>
+                            <MudTh>Nom complet</MudTh>
+                            <MudTh>Correu electrònic</MudTh>
+                            <MudTh>Rol</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>
+                                <div class="d-flex align-center gap-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.PersonOff"
+                                        Size="Size.Small" Style="color:#C62828" />
+                                    <MudText Style="font-weight:500">@context.NomComplet</MudText>
+                                </div>
+                            </MudTd>
+                            <MudTd>
+                                <MudText Typo="Typo.caption">@context.Email</MudText>
+                            </MudTd>
+                            <MudTd>
+                                <MudChip T="string" Size="Size.Small"
+                                    Color="@(context.Rol == "EquipDirectiu" ? Color.Primary : Color.Default)">
+                                    @context.Rol
+                                </MudChip>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                    <MudText Typo="Typo.caption" Style="color:#718096" Class="mt-2">
+                        @_mestresSenseLlista.Count usuari(s) sense activitat enregistrada
+                    </MudText>
+                }
+            }
+        </MudTabPanel>
+
+    </MudTabs>
 }
 
 @code {
@@ -210,13 +342,16 @@ else
     private DateTime? _filtreDataInici;
     private DateTime? _filtreDataFi;
 
-    private List<SessioTraçabilitatModel> _sessions = [];
-    private int _total;
-    private int _pagina = 1;
-    private const int MidaPagina = 50;
+    private List<ResumAlumneModel> _resumAlumnes = [];
+    private List<MestreSenseLlistaModel> _mestresSenseLlista = [];
     private bool _carregant = true;
+    private bool _carregantResum;
+    private bool _carregantMestres;
+    private bool _resumCarregat;
+    private bool _mestresCarregat;
 
-    private int PaginesTotal => (int)Math.Ceiling((double)_total / MidaPagina);
+    private MudTable<SessioTraçabilitatModel> _taula = null!;
+
     private bool TeFiltresActius => _filtreGrupId.HasValue || _filtreMestreId.HasValue
         || _filtreFranjaId.HasValue || _filtreDataInici.HasValue || _filtreDataFi.HasValue;
 
@@ -239,54 +374,68 @@ else
         _franjes = tFranjes.Result.OrderBy(f => f.Ordre).ToList();
 
         var actiu = _anys.FirstOrDefault(a => a.EsActiu) ?? _anys.FirstOrDefault();
-        if (actiu != null)
-        {
-            _anySeleccionat = actiu.Id;
-            await CarregarSessionsAsync();
-        }
+        if (actiu != null) _anySeleccionat = actiu.Id;
         _carregant = false;
+    }
+
+    private async Task<TableData<SessioTraçabilitatModel>> CarregarSessionsServerAsync(
+        TableState state, CancellationToken ct)
+    {
+        var sortBy = state.SortLabel ?? "data";
+        var sortAsc = state.SortDirection == SortDirection.Ascending;
+        var dataInici = _filtreDataInici.HasValue
+            ? DateOnly.FromDateTime(_filtreDataInici.Value) : (DateOnly?)null;
+        var dataFi = _filtreDataFi.HasValue
+            ? DateOnly.FromDateTime(_filtreDataFi.Value) : (DateOnly?)null;
+
+        var data = await ConfiguracioService.GetSessionsAsync(
+            _anySeleccionat, state.Page + 1, state.PageSize,
+            _filtreGrupId, _filtreMestreId, dataInici, dataFi, _filtreFranjaId,
+            sortBy, sortAsc);
+
+        return new TableData<SessioTraçabilitatModel>
+        {
+            Items = data.Sessions,
+            TotalItems = data.Total
+        };
     }
 
     private async Task AnyCanviatAsync(Guid id)
     {
         _anySeleccionat = id;
-        _pagina = 1;
-        await CarregarSessionsAsync();
+        _resumCarregat = false;
+        _mestresCarregat = false;
+        await RecaerregarTaulaAsync();
     }
 
-    private async Task FiltreGrupCanviatAsync(Guid? id)
+    private async Task FiltreCanviatAsync(Guid? id)
     {
         _filtreGrupId = id;
-        _pagina = 1;
-        await CarregarSessionsAsync();
+        await RecaerregarTaulaAsync();
     }
 
     private async Task FiltreMestreCanviatAsync(Guid? id)
     {
         _filtreMestreId = id;
-        _pagina = 1;
-        await CarregarSessionsAsync();
+        await RecaerregarTaulaAsync();
     }
 
     private async Task FiltreFranjaCanviatAsync(Guid? id)
     {
         _filtreFranjaId = id;
-        _pagina = 1;
-        await CarregarSessionsAsync();
+        await RecaerregarTaulaAsync();
     }
 
     private async Task FiltreDataIniciCanviada(DateTime? data)
     {
         _filtreDataInici = data;
-        _pagina = 1;
-        await CarregarSessionsAsync();
+        await RecaerregarTaulaAsync();
     }
 
     private async Task FiltreDataFiCanviada(DateTime? data)
     {
         _filtreDataFi = data;
-        _pagina = 1;
-        await CarregarSessionsAsync();
+        await RecaerregarTaulaAsync();
     }
 
     private async Task NetejarFiltresAsync()
@@ -296,28 +445,64 @@ else
         _filtreFranjaId = null;
         _filtreDataInici = null;
         _filtreDataFi = null;
-        _pagina = 1;
-        await CarregarSessionsAsync();
+        await RecaerregarTaulaAsync();
     }
 
-    private async Task PaginaCanviadaAsync(int pagina)
+    private async Task RecaerregarTaulaAsync()
     {
-        _pagina = pagina;
-        await CarregarSessionsAsync();
+        if (_taula != null)
+            await _taula.ReloadServerData();
     }
 
-    private async Task CarregarSessionsAsync()
+    // ── Resum per alumne ────────────────────────────────────
+
+    private async Task FiltreGrupResumCanviatAsync(Guid? id)
     {
-        if (_anySeleccionat == Guid.Empty) return;
+        _filtreGrupId = id;
+        _resumCarregat = false;
+        await CarregarResumAlumnesAsync();
+    }
+
+    private async Task FiltreDataIniciResumCanviada(DateTime? data)
+    {
+        _filtreDataInici = data;
+        _resumCarregat = false;
+        await CarregarResumAlumnesAsync();
+    }
+
+    private async Task FiltreDataFiResumCanviada(DateTime? data)
+    {
+        _filtreDataFi = data;
+        _resumCarregat = false;
+        await CarregarResumAlumnesAsync();
+    }
+
+    private async Task CarregarResumAlumnesAsync()
+    {
+        if (_resumCarregat || _anySeleccionat == Guid.Empty) return;
+        _carregantResum = true;
+        StateHasChanged();
         var dataInici = _filtreDataInici.HasValue
             ? DateOnly.FromDateTime(_filtreDataInici.Value) : (DateOnly?)null;
         var dataFi = _filtreDataFi.HasValue
             ? DateOnly.FromDateTime(_filtreDataFi.Value) : (DateOnly?)null;
-        var data = await ConfiguracioService.GetSessionsAsync(
-            _anySeleccionat, _pagina, MidaPagina,
-            _filtreGrupId, _filtreMestreId, dataInici, dataFi, _filtreFranjaId);
-        _sessions = data.Sessions;
-        _total = data.Total;
+        _resumAlumnes = await ConfiguracioService.GetResumAlumnesAsync(
+            _anySeleccionat, _filtreGrupId, null, dataInici, dataFi, _filtreFranjaId);
+        _carregantResum = false;
+        _resumCarregat = true;
+        StateHasChanged();
+    }
+
+    // ── Mestres sense llista ────────────────────────────────
+
+    private async Task CarregarMestresSenseLlistaAsync()
+    {
+        if (_mestresCarregat || _anySeleccionat == Guid.Empty) return;
+        _carregantMestres = true;
+        StateHasChanged();
+        _mestresSenseLlista = await ConfiguracioService.GetMestresSenseLlistaAsync(_anySeleccionat);
+        _carregantMestres = false;
+        _mestresCarregat = true;
         StateHasChanged();
     }
 }

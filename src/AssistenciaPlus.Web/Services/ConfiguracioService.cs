@@ -250,9 +250,9 @@ public class ConfiguracioService
         Guid anyAcademicId, int pagina = 1, int midaPagina = 50,
         Guid? grupId = null, Guid? mestreId = null,
         DateOnly? dataInici = null, DateOnly? dataFi = null,
-        Guid? franjaId = null)
+        Guid? franjaId = null, string sortBy = "data", bool sortAsc = false)
     {
-        var url = $"assistencia/sessions?anyAcademicId={anyAcademicId}&pagina={pagina}&midaPagina={midaPagina}";
+        var url = $"assistencia/sessions?anyAcademicId={anyAcademicId}&pagina={pagina}&midaPagina={midaPagina}&sortBy={sortBy}&sortAsc={sortAsc}";
         if (grupId.HasValue) url += $"&grupId={grupId}";
         if (mestreId.HasValue) url += $"&mestreId={mestreId}";
         if (dataInici.HasValue) url += $"&dataInici={dataInici:yyyy-MM-dd}";
@@ -260,6 +260,27 @@ public class ConfiguracioService
         if (franjaId.HasValue) url += $"&franjaId={franjaId}";
         var result = await _http.GetFromJsonAsync<ApiResponse<SessionsPagedModel>>(url, _opts);
         return result?.Data ?? new SessionsPagedModel();
+    }
+
+    public async Task<List<ResumAlumneModel>> GetResumAlumnesAsync(
+        Guid anyAcademicId, Guid? grupId = null, Guid? mestreId = null,
+        DateOnly? dataInici = null, DateOnly? dataFi = null, Guid? franjaId = null)
+    {
+        var url = $"assistencia/resum-alumnes?anyAcademicId={anyAcademicId}";
+        if (grupId.HasValue) url += $"&grupId={grupId}";
+        if (mestreId.HasValue) url += $"&mestreId={mestreId}";
+        if (dataInici.HasValue) url += $"&dataInici={dataInici:yyyy-MM-dd}";
+        if (dataFi.HasValue) url += $"&dataFi={dataFi:yyyy-MM-dd}";
+        if (franjaId.HasValue) url += $"&franjaId={franjaId}";
+        var result = await _http.GetFromJsonAsync<ApiResponse<List<ResumAlumneModel>>>(url, _opts);
+        return result?.Data ?? [];
+    }
+
+    public async Task<List<MestreSenseLlistaModel>> GetMestresSenseLlistaAsync(Guid anyAcademicId)
+    {
+        var result = await _http.GetFromJsonAsync<ApiResponse<List<MestreSenseLlistaModel>>>(
+            $"assistencia/mestres-sense-llista?anyAcademicId={anyAcademicId}", _opts);
+        return result?.Data ?? [];
     }
 
     // ── Importació alumnes Excel ─────────────────────────────

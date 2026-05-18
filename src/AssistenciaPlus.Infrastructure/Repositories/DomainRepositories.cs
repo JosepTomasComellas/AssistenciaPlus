@@ -296,8 +296,10 @@ public class AssistenciaRepository : IAssistenciaRepository
         Guid? grupId = null, Guid? mestreId = null,
         DateOnly? dataInici = null, DateOnly? dataFi = null,
         Guid? franjaId = null,
+        string sortBy = "data", bool sortAsc = false,
         CancellationToken ct = default)
-        => await _ctx.RegistresAssistencia
+    {
+        var q = _ctx.RegistresAssistencia
             .Include(r => r.Grup).ThenInclude(g => g.Curs)
             .Include(r => r.FranjaHoraria)
             .Include(r => r.Mestre)
@@ -307,11 +309,24 @@ public class AssistenciaRepository : IAssistenciaRepository
                 && (mestreId == null || r.MestreId == mestreId)
                 && (dataInici == null || r.Data >= dataInici)
                 && (dataFi == null || r.Data <= dataFi)
-                && (franjaId == null || r.FranjaHorariaId == franjaId))
-            .OrderByDescending(r => r.Data).ThenByDescending(r => r.DegatAt)
-            .Skip((pagina - 1) * midaPagina)
-            .Take(midaPagina)
-            .ToListAsync(ct);
+                && (franjaId == null || r.FranjaHorariaId == franjaId));
+
+        q = (sortBy.ToLower(), sortAsc) switch
+        {
+            ("grup", true)    => q.OrderBy(r => r.Grup.NomComplet).ThenByDescending(r => r.Data),
+            ("grup", false)   => q.OrderByDescending(r => r.Grup.NomComplet).ThenByDescending(r => r.Data),
+            ("mestre", true)  => q.OrderBy(r => r.Mestre.NomComplet).ThenByDescending(r => r.Data),
+            ("mestre", false) => q.OrderByDescending(r => r.Mestre.NomComplet).ThenByDescending(r => r.Data),
+            ("franja", true)  => q.OrderBy(r => r.FranjaHoraria.Ordre).ThenByDescending(r => r.Data),
+            ("franja", false) => q.OrderByDescending(r => r.FranjaHoraria.Ordre).ThenByDescending(r => r.Data),
+            ("creatat", true) => q.OrderBy(r => r.CreatedAt).ThenByDescending(r => r.Data),
+            ("creatat", false)=> q.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Data),
+            (_, true)  => q.OrderBy(r => r.Data).ThenByDescending(r => r.DegatAt),
+            _          => q.OrderByDescending(r => r.Data).ThenByDescending(r => r.DegatAt)
+        };
+
+        return await q.Skip((pagina - 1) * midaPagina).Take(midaPagina).ToListAsync(ct);
+    }
 
     public Task<int> GetSessionsCountAsync(
         Guid anyAcademicId,
@@ -327,6 +342,95 @@ public class AssistenciaRepository : IAssistenciaRepository
                 && (dataFi == null || r.Data <= dataFi)
                 && (franjaId == null || r.FranjaHorariaId == franjaId))
             .CountAsync(ct);
+
+    public async Task<IReadOnlyList<Application.DTOs.ResumAlumneDto>> GetResumAlumnesAsync(
+        Guid anyAcademicId, Guid? grupId = null, Guid? mestreId = null,
+        DateOnly? dataInici = null, DateOnly? dataFi = null, Guid? franjaId = null,
+        CancellationToken ct = default)
+        => await _ctx.AssistenciesAlumnes
+            .Where(aa =>
+                !aa.RegistreAssistencia.Grup.IsDeleted &&
+                aa.RegistreAssistencia.Grup.AnyAcademicId == anyAcademicId &&
+                (grupId == null || aa.RegistreAssistencia.GrupId == grupId) &&
+                (mestreId == null || aa.RegistreAssistencia.MestreId == mestreId) &&
+                (dataInici == null || aa.RegistreAssistencia.Data >= dataInici) &&
+                (dataFi == null || aa.RegistreAssistencia.Data <= dataFi) &&
+                (franjaId == null || aa.RegistreAssistencia.FranjaHorariaId == franjaId))
+            .GroupBy(aa => new
+            {
+                aa.AlumneId,
+                AlumneNom = aa.Alumne.NomComplet,
+                GrupNom = aa.RegistreAssistencia.Grup.NomComplet
+            })
+            .Select(g => new Application.DTOs.ResumAlumneDto
+            {
+                AlumneId = g.Key.AlumneId,
+                AlumneNom = g.Key.AlumneNom,
+                GrupNom = g.Key.GrupNom,
+                TotalSessions = g.Count(),
+                TotalAbsents = g.Sum(aa => aa.Estat == Domain.Entities.EstatAssistencia.Absent ? 1 : 0),
+                TotalPresents = g.Sum(aa => aa.Estat == Domain.Entities.EstatAssistencia.Present ? 1 : 0),
+                TotalTard = g.Sum(aa => aa.Estat == Domain.Entities.EstatAssistencia.Tard ? 1 : 0)
+            })
+            .OrderByDescending(r => r.TotalAbsents)
+            .ThenBy(r => r.AlumneNom)
+            .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<Application.DTOs.MestreSenseLlistaDto>> GetMestresSenseLlistaAsync(
+        Guid anyAcademicId, CancellationToken ct = default)
+    {
+        var mestresAmbLlista = await _ctx.RegistresAssistencia
+            .Where(r => r.Grup.AnyAcademicId == anyAcademicId)
+            .Select(r => r.MestreId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        return await _ctx.Usuaris
+            .Where(u => u.EsActiu && !mestresAmbLlista.Contains(u.Id))
+            .OrderBy(u => u.NomComplet)
+            .Select(u => new Application.DTOs.MestreSenseLlistaDto
+            {
+                Id = u.Id,
+                NomComplet = u.NomComplet,
+                Email = u.Email,
+                Rol = u.Rol.ToString()
+            })
+            .ToListAsync(ct);
+    }
+
+    public async Task<Application.DTOs.KpisDashboardDto> GetKpisDashboardAsync(
+        Guid anyAcademicId, DateOnly data, CancellationToken ct = default)
+    {
+        var grups = await _ctx.Grups
+            .Where(g => g.AnyAcademicId == anyAcademicId)
+            .Select(g => new { g.Id, g.NomComplet })
+            .ToListAsync(ct);
+
+        var resum = await _ctx.RegistresAssistencia
+            .Where(r => r.Grup.AnyAcademicId == anyAcademicId && r.Data == data)
+            .Select(r => new
+            {
+                r.GrupId,
+                Absents = r.Assistencies.Count(a => a.Estat == Domain.Entities.EstatAssistencia.Absent)
+            })
+            .ToListAsync(ct);
+
+        var grupsAmbLlista = resum.Select(r => r.GrupId).Distinct().ToHashSet();
+        var grupsSenseLlista = grups
+            .Where(g => !grupsAmbLlista.Contains(g.Id))
+            .Select(g => g.NomComplet)
+            .OrderBy(n => n)
+            .ToList();
+
+        return new Application.DTOs.KpisDashboardDto
+        {
+            SessionsAvui = resum.Count,
+            AbsenciesAvui = resum.Sum(r => r.Absents),
+            GrupsTotals = grups.Count,
+            GrupsAmbLlista = grupsAmbLlista.Count,
+            GrupsSenseLlista = grupsSenseLlista
+        };
+    }
 
     public async Task<RegistreAssistencia> AfegirRegistreAsync(
         RegistreAssistencia registre, CancellationToken ct = default)

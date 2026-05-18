@@ -197,7 +197,36 @@ public record SessioTraçabilitatModel
     public int NombrePresents { get; init; }
     public int NombreTard { get; init; }
     public int NombreTotal { get; init; }
+    public DateTime CreatAt { get; init; }
     public DateTime DegatAt { get; init; }
+}
+
+public record ResumAlumneModel
+{
+    public Guid AlumneId { get; init; }
+    public string AlumneNom { get; init; } = string.Empty;
+    public string GrupNom { get; init; } = string.Empty;
+    public int TotalSessions { get; init; }
+    public int TotalAbsents { get; init; }
+    public int TotalPresents { get; init; }
+    public int TotalTard { get; init; }
+}
+
+public record MestreSenseLlistaModel
+{
+    public Guid Id { get; init; }
+    public string NomComplet { get; init; } = string.Empty;
+    public string Email { get; init; } = string.Empty;
+    public string Rol { get; init; } = string.Empty;
+}
+
+public record KpisDashboardModel
+{
+    public int SessionsAvui { get; init; }
+    public int AbsenciesAvui { get; init; }
+    public int GrupsTotals { get; init; }
+    public int GrupsAmbLlista { get; init; }
+    public List<string> GrupsSenseLlista { get; init; } = [];
 }
 
 public record MigrarAnyAcademicModel

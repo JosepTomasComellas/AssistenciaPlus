@@ -199,6 +199,8 @@ public class AssistenciaController : BaseApiController
         [FromQuery] DateOnly? dataInici = null,
         [FromQuery] DateOnly? dataFi = null,
         [FromQuery] Guid? franjaId = null,
+        [FromQuery] string sortBy = "data",
+        [FromQuery] bool sortAsc = false,
         CancellationToken ct = default)
     {
         midaPagina = Math.Clamp(midaPagina, 1, 200);
@@ -206,7 +208,7 @@ public class AssistenciaController : BaseApiController
 
         var sessions = await _assistenciaRepo.GetSessionsAsync(
             anyAcademicId, pagina, midaPagina,
-            grupId, mestreId, dataInici, dataFi, franjaId, ct);
+            grupId, mestreId, dataInici, dataFi, franjaId, sortBy, sortAsc, ct);
         var total = await _assistenciaRepo.GetSessionsCountAsync(
             anyAcademicId, grupId, mestreId, dataInici, dataFi, franjaId, ct);
 
@@ -221,10 +223,49 @@ public class AssistenciaController : BaseApiController
             NombrePresents = r.Assistencies.Count(a => a.Estat == Domain.Entities.EstatAssistencia.Present),
             NombreTard = r.Assistencies.Count(a => a.Estat == Domain.Entities.EstatAssistencia.Tard),
             NombreTotal = r.Assistencies.Count,
+            CreatAt = r.CreatedAt,
             DegatAt = r.DegatAt
         });
 
         return Ok(ApiResponse<object>.Ok(new { Total = total, Sessions = dtos }));
+    }
+
+    [HttpGet("resum-alumnes")]
+    [Authorize(Roles = "EquipDirectiu")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<AssistenciaPlus.Application.DTOs.ResumAlumneDto>>>> GetResumAlumnes(
+        [FromQuery] Guid anyAcademicId,
+        [FromQuery] Guid? grupId = null,
+        [FromQuery] Guid? mestreId = null,
+        [FromQuery] DateOnly? dataInici = null,
+        [FromQuery] DateOnly? dataFi = null,
+        [FromQuery] Guid? franjaId = null,
+        CancellationToken ct = default)
+    {
+        var resum = await _assistenciaRepo.GetResumAlumnesAsync(
+            anyAcademicId, grupId, mestreId, dataInici, dataFi, franjaId, ct);
+        return Ok(ApiResponse<IEnumerable<AssistenciaPlus.Application.DTOs.ResumAlumneDto>>.Ok(resum));
+    }
+
+    [HttpGet("mestres-sense-llista")]
+    [Authorize(Roles = "EquipDirectiu")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<AssistenciaPlus.Application.DTOs.MestreSenseLlistaDto>>>> GetMestresSenseLlista(
+        [FromQuery] Guid anyAcademicId,
+        CancellationToken ct = default)
+    {
+        var mestres = await _assistenciaRepo.GetMestresSenseLlistaAsync(anyAcademicId, ct);
+        return Ok(ApiResponse<IEnumerable<AssistenciaPlus.Application.DTOs.MestreSenseLlistaDto>>.Ok(mestres));
+    }
+
+    [HttpGet("kpis-dashboard")]
+    [Authorize(Roles = "EquipDirectiu")]
+    public async Task<ActionResult<ApiResponse<AssistenciaPlus.Application.DTOs.KpisDashboardDto>>> GetKpisDashboard(
+        [FromQuery] Guid anyAcademicId,
+        [FromQuery] DateOnly? data = null,
+        CancellationToken ct = default)
+    {
+        var kpis = await _assistenciaRepo.GetKpisDashboardAsync(
+            anyAcademicId, data ?? DateOnly.FromDateTime(DateTime.Today), ct);
+        return Ok(ApiResponse<AssistenciaPlus.Application.DTOs.KpisDashboardDto>.Ok(kpis));
     }
 
     /// <summary>

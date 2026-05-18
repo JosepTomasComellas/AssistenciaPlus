@@ -63,4 +63,16 @@ public class AssistenciaService
 
         return (false, null, result?.Error ?? "Error al desar l'assistència");
     }
+
+    public async Task<KpisDashboardModel?> GetKpisDashboardAsync(Guid anyAcademicId, DateOnly? data = null)
+    {
+        try
+        {
+            var url = $"assistencia/kpis-dashboard?anyAcademicId={anyAcademicId}";
+            if (data.HasValue) url += $"&data={data:yyyy-MM-dd}";
+            var result = await _http.GetFromJsonAsync<ApiResponse<KpisDashboardModel>>(url, _opts);
+            return result?.Data;
+        }
+        catch { return null; }
+    }
 }

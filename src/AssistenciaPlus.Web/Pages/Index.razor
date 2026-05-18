@@ -3,7 +3,9 @@
 @inject AuthService AuthService
 @inject GrupService GrupService
 @inject AssistenciaService AssistenciaService
+@inject ConfiguracioService ConfiguracioService
 @inject BreadcrumbService BreadcrumbService
+@inject NavigationManager Nav
 
 <PageTitle>Inici — AssistenciaPlus</PageTitle>
 
@@ -159,6 +161,99 @@ else
             </MudText>
         }
     </MudPaper>
+
+    <!-- Bloc global: només Equip Directiu -->
+    <AuthorizeView Roles="EquipDirectiu">
+        <Authorized>
+            <div class="mt-6">
+                <div class="d-flex align-center justify-space-between mb-3 flex-wrap gap-2">
+                    <MudText Typo="Typo.h6" Style="font-weight:600">
+                        Vista global del centre avui
+                    </MudText>
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                        StartIcon="@Icons.Material.Filled.TableChart"
+                        OnClick="@(() => Nav.NavigateTo("/configuracio/sessions"))">
+                        Veure traçabilitat completa
+                    </MudButton>
+                </div>
+
+                @if (_kpis == null)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                }
+                else
+                {
+                    <MudGrid>
+                        <MudItem xs="6" sm="3">
+                            <MudPaper Class="pa-4 text-center" Elevation="1"
+                                Style="border-radius:12px;border-left:4px solid #2E7D32">
+                                <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">
+                                    @_kpis.GrupsAmbLlista
+                                </MudText>
+                                <MudText Typo="Typo.caption" Style="color:#718096;text-transform:uppercase;letter-spacing:0.05em">
+                                    Grups amb llista
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudPaper Class="pa-4 text-center" Elevation="1"
+                                Style="@($"border-radius:12px;border-left:4px solid {(_kpis.GrupsSenseLlista.Count > 0 ? "#C62828" : "#2E7D32")}")">
+                                <MudText Typo="Typo.h4" Style="@($"font-weight:700;color:{(_kpis.GrupsSenseLlista.Count > 0 ? "#C62828" : "#2E7D32")}")">
+                                    @_kpis.GrupsSenseLlista.Count
+                                </MudText>
+                                <MudText Typo="Typo.caption" Style="color:#718096;text-transform:uppercase;letter-spacing:0.05em">
+                                    Grups sense llista
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudPaper Class="pa-4 text-center" Elevation="1"
+                                Style="border-radius:12px;border-left:4px solid #E05B1A">
+                                <MudText Typo="Typo.h4" Style="font-weight:700;color:#E05B1A">
+                                    @_kpis.SessionsAvui
+                                </MudText>
+                                <MudText Typo="Typo.caption" Style="color:#718096;text-transform:uppercase;letter-spacing:0.05em">
+                                    Sessions avui
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <MudPaper Class="pa-4 text-center" Elevation="1"
+                                Style="border-radius:12px;border-left:4px solid #C62828">
+                                <MudText Typo="Typo.h4" Style="font-weight:700;color:#C62828">
+                                    @_kpis.AbsenciesAvui
+                                </MudText>
+                                <MudText Typo="Typo.caption" Style="color:#718096;text-transform:uppercase;letter-spacing:0.05em">
+                                    Absències (global)
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+
+                    @if (_kpis.GrupsSenseLlista.Count > 0)
+                    {
+                        <MudPaper Elevation="1" Class="pa-4 mt-4" Style="border-radius:12px;border-left:4px solid #C62828">
+                            <div class="d-flex align-center gap-2 mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Warning"
+                                    Style="color:#C62828" Size="Size.Small" />
+                                <MudText Typo="Typo.subtitle2" Style="font-weight:700;color:#C62828">
+                                    Grups sense llista passada avui (@_kpis.GrupsSenseLlista.Count)
+                                </MudText>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var nom in _kpis.GrupsSenseLlista)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
+                                        @nom
+                                    </MudChip>
+                                }
+                            </div>
+                        </MudPaper>
+                    }
+                }
+            </div>
+        </Authorized>
+    </AuthorizeView>
 }
 
 <style>
@@ -186,6 +281,7 @@ else
     private double[] _donutData = [];
     private string[] _donutLabels = [];
     private string[] _donutPalette = [];
+    private KpisDashboardModel? _kpis;
 
     protected override async Task OnInitializedAsync()
     {
@@ -217,7 +313,6 @@ else
             }
         }
 
-        // Construïm el donut filtrant els valors zero (MudChart no els renderitza bé)
         var slices = new List<(double Val, string Label)>();
         if (_totalPresents > 0) slices.Add((_totalPresents, $"Presents ({_totalPresents})"));
         if (_totalAbsents > 0) slices.Add((_totalAbsents, $"Absents ({_totalAbsents})"));
@@ -227,9 +322,23 @@ else
         _donutPalette = slices.Select(s => s.Label.StartsWith("P") ? "#2E7D32" : s.Label.StartsWith("A") ? "#C62828" : "#F57F17").ToArray();
 
         _carregant = false;
+
+        // KPIs globals (EquipDirectiu): en segon pla, no bloqueja
+        _ = CarregarKpisAsync();
     }
 
-    [Inject] NavigationManager Nav { get; set; } = null!;
+    private async Task CarregarKpisAsync()
+    {
+        try
+        {
+            var anys = await ConfiguracioService.GetAnysAcademicsAsync();
+            var actiu = anys.FirstOrDefault(a => a.EsActiu) ?? anys.FirstOrDefault();
+            if (actiu == null) return;
+            _kpis = await AssistenciaService.GetKpisDashboardAsync(actiu.Id);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch { /* KPIs no son crítics */ }
+    }
 
     private void NavigarPassarLlista(Guid grupId)
     {

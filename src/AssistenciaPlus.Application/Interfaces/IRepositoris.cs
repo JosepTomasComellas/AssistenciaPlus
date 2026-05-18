@@ -57,6 +57,7 @@ public interface IAssistenciaRepository
         Guid? grupId = null, Guid? mestreId = null,
         DateOnly? dataInici = null, DateOnly? dataFi = null,
         Guid? franjaId = null,
+        string sortBy = "data", bool sortAsc = false,
         CancellationToken ct = default);
     Task<int> GetSessionsCountAsync(
         Guid anyAcademicId,
@@ -64,6 +65,14 @@ public interface IAssistenciaRepository
         DateOnly? dataInici = null, DateOnly? dataFi = null,
         Guid? franjaId = null,
         CancellationToken ct = default);
+    Task<IReadOnlyList<AssistenciaPlus.Application.DTOs.ResumAlumneDto>> GetResumAlumnesAsync(
+        Guid anyAcademicId, Guid? grupId = null, Guid? mestreId = null,
+        DateOnly? dataInici = null, DateOnly? dataFi = null, Guid? franjaId = null,
+        CancellationToken ct = default);
+    Task<IReadOnlyList<AssistenciaPlus.Application.DTOs.MestreSenseLlistaDto>> GetMestresSenseLlistaAsync(
+        Guid anyAcademicId, CancellationToken ct = default);
+    Task<AssistenciaPlus.Application.DTOs.KpisDashboardDto> GetKpisDashboardAsync(
+        Guid anyAcademicId, DateOnly data, CancellationToken ct = default);
     Task<RegistreAssistencia> AfegirRegistreAsync(RegistreAssistencia registre, CancellationToken ct = default);
     Task ActualitzarRegistreAsync(RegistreAssistencia registre, CancellationToken ct = default);
     Task<int> SaveChangesAsync(CancellationToken ct = default);
