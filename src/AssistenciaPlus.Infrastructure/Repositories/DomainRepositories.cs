@@ -423,33 +423,34 @@ public class AssistenciaRepository : IAssistenciaRepository
     public async Task<Application.DTOs.KpisDashboardDto> GetKpisDashboardAsync(
         Guid anyAcademicId, DateOnly data, CancellationToken ct = default)
     {
-        var grups = await _ctx.Grups
+        var grupData = await _ctx.Grups
             .Where(g => g.AnyAcademicId == anyAcademicId)
-            .Select(g => new { g.Id, g.Curs.Nom, g.Lletra })
-            .ToListAsync(ct);
-
-        var resum = await _ctx.RegistresAssistencia
-            .Where(r => r.Grup.AnyAcademicId == anyAcademicId && r.Data == data)
-            .Select(r => new
+            .Select(g => new
             {
-                r.GrupId,
-                Absents = r.Assistencies.Count(a => a.Estat == Domain.Entities.EstatAssistencia.Absent)
+                g.Id,
+                g.Lletra,
+                CursNom = g.Curs.Nom,
+                TeLlista = g.RegistresAssistencia.Any(r => r.Data == data),
+                SessionsCount = g.RegistresAssistencia.Count(r => r.Data == data),
+                AbsentsCount = g.RegistresAssistencia
+                    .Where(r => r.Data == data)
+                    .SelectMany(r => r.Assistencies)
+                    .Count(a => a.Estat == Domain.Entities.EstatAssistencia.Absent)
             })
             .ToListAsync(ct);
 
-        var grupsAmbLlista = resum.Select(r => r.GrupId).Distinct().ToHashSet();
-        var grupsSenseLlista = grups
-            .Where(g => !grupsAmbLlista.Contains(g.Id))
-            .Select(g => string.IsNullOrEmpty(g.Lletra) ? g.Nom : $"{g.Nom} {g.Lletra}")
+        var grupsSenseLlista = grupData
+            .Where(g => !g.TeLlista)
+            .Select(g => string.IsNullOrEmpty(g.Lletra) ? g.CursNom : $"{g.CursNom} {g.Lletra}")
             .OrderBy(n => n)
             .ToList();
 
         return new Application.DTOs.KpisDashboardDto
         {
-            SessionsAvui = resum.Count,
-            AbsenciesAvui = resum.Sum(r => r.Absents),
-            GrupsTotals = grups.Count,
-            GrupsAmbLlista = grupsAmbLlista.Count,
+            SessionsAvui = grupData.Sum(g => g.SessionsCount),
+            AbsenciesAvui = grupData.Sum(g => g.AbsentsCount),
+            GrupsTotals = grupData.Count,
+            GrupsAmbLlista = grupData.Count(g => g.TeLlista),
             GrupsSenseLlista = grupsSenseLlista
         };
     }
