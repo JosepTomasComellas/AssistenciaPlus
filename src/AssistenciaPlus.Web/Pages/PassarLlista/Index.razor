@@ -7,6 +7,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 @inject BreadcrumbService BreadcrumbService
+@inject AuthenticationStateProvider AuthStateProvider
 @implements IAsyncDisposable
 
 <PageTitle>Passar llista — AssistenciaPlus</PageTitle>
@@ -207,6 +208,16 @@ else if (_fase == Fase.PassarLlista)
                     : _franjaSeleccionada?.HorariDisplay ?? string.Empty)
                 · @_alumnes.Count alumnes
             </MudText>
+            @if (_editorsActuals.Count > 0)
+            {
+                <div class="d-flex align-center gap-1 mt-1">
+                    <MudIcon Icon="@Icons.Material.Filled.EditNote"
+                        Size="Size.Small" Style="color:#E65100" />
+                    <MudText Typo="Typo.caption" Style="color:#E65100;font-weight:600">
+                        Editant: @string.Join(", ", _editorsActuals)
+                    </MudText>
+                </div>
+            }
         </div>
         @if (_grupSeleccionat.UsaModeFusteta)
         {
@@ -342,6 +353,8 @@ else if (_fase == Fase.PassarLlista)
     private List<FranjaHorariaModel> _franjasADesar = [];
     private string _etiquetaFranja = string.Empty;
     private bool _hiHaActualitzacioExterna;
+    private string _nomUsuariActual = "";
+    private List<string> _editorsActuals = [];
 
 
     [SupplyParameterFromQuery]
@@ -351,6 +364,9 @@ else if (_fase == Fase.PassarLlista)
     {
         ActualitzarBreadcrumbs();
         ActualitzarDataAvui();
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _nomUsuariActual = authState.User.Identity?.Name ?? "Usuari";
 
         _grups = await GrupService.GetGrupsAsync();
         _franjes = await GrupService.GetFranjesAsync();
@@ -375,6 +391,8 @@ else if (_fase == Fase.PassarLlista)
         {
             await SignalR.ConnectarAsync();
             SignalR.AssistenciaActualitzada += OnAssistenciaActualitzada;
+            SignalR.UsuariEditant += OnUsuariEditant;
+            SignalR.UsuariAbandonaEdicio += OnUsuariAbandonaEdicio;
             SignalR.Reconnectant += OnReconnectant;
             SignalR.Reconnectat += OnReconnectat;
             SignalR.Desconnectat += OnDesconnectat;
@@ -422,6 +440,24 @@ else if (_fase == Fase.PassarLlista)
         await CarregarFase3Async(_franjasADesar.FirstOrDefault()?.Id ?? Guid.Empty);
     }
 
+    private void OnUsuariEditant(string grupId, string nomUsuari)
+    {
+        if (_grupSeleccionat?.Id.ToString() == grupId && !_editorsActuals.Contains(nomUsuari))
+        {
+            _editorsActuals.Add(nomUsuari);
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OnUsuariAbandonaEdicio(string grupId, string nomUsuari)
+    {
+        if (_grupSeleccionat?.Id.ToString() == grupId)
+        {
+            _editorsActuals.Remove(nomUsuari);
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
     private void ActualitzarDataAvui()
     {
         var info = System.Globalization.CultureInfo.GetCultureInfo("ca-ES");
@@ -437,8 +473,13 @@ else if (_fase == Fase.PassarLlista)
         _dataPickerValue = novaData;
         ActualitzarDataAvui();
         if (_grupSeleccionat != null)
+        {
+            if (_fase == Fase.PassarLlista)
+                await SignalR.AbandonarEdicioAsync(_grupSeleccionat.Id);
             await SignalR.AbandonarGrupAsync(_grupSeleccionat.Id);
+        }
         _grupSeleccionat = null;
+        _editorsActuals.Clear();
         _fase = Fase.SeleccionarGrup;
         ActualitzarBreadcrumbs();
     }
@@ -446,7 +487,11 @@ else if (_fase == Fase.PassarLlista)
     private async Task SeleccionarGrup(GrupModel grup)
     {
         if (_grupSeleccionat != null)
+        {
+            if (_fase == Fase.PassarLlista)
+                await SignalR.AbandonarEdicioAsync(_grupSeleccionat.Id);
             await SignalR.AbandonarGrupAsync(_grupSeleccionat.Id);
+        }
 
         _grupSeleccionat = grup;
         _registresAvui = await AssistenciaService.GetRegistresAsync(grup.Id, _dataSeleccionada);
@@ -503,9 +548,14 @@ else if (_fase == Fase.PassarLlista)
 
         _observacioSessio = registreExistent?.Observacio;
         _modeFusteta = _grupSeleccionat!.UsaModeFusteta;
+        _editorsActuals.Clear();
+        _hiHaActualitzacioExterna = false;
 
         ActualitzarBreadcrumbs();
         _fase = Fase.PassarLlista;
+
+        if (SignalR.EstaConnectat)
+            await SignalR.AnunciarEditantAsync(_grupSeleccionat.Id, _nomUsuariActual);
     }
 
     private void MarcarTotsPresents()
@@ -565,11 +615,17 @@ else if (_fase == Fase.PassarLlista)
     public async ValueTask DisposeAsync()
     {
         SignalR.AssistenciaActualitzada -= OnAssistenciaActualitzada;
+        SignalR.UsuariEditant -= OnUsuariEditant;
+        SignalR.UsuariAbandonaEdicio -= OnUsuariAbandonaEdicio;
         SignalR.Reconnectant -= OnReconnectant;
         SignalR.Reconnectat -= OnReconnectat;
         SignalR.Desconnectat -= OnDesconnectat;
         if (_grupSeleccionat != null)
+        {
+            if (_fase == Fase.PassarLlista)
+                await SignalR.AbandonarEdicioAsync(_grupSeleccionat.Id);
             await SignalR.AbandonarGrupAsync(_grupSeleccionat.Id);
+        }
     }
 
     private List<FranjaHorariaModel> FranjesMati()

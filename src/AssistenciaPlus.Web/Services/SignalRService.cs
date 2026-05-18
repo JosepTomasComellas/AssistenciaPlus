@@ -12,6 +12,9 @@ public class SignalRService : IAsyncDisposable
     public event Action<string, string>? AssistenciaActualitzada;
     // alumneId, alumneNom, grupNom, missatge, esCritic
     public event Action<string, string, string, string, bool>? AlertaAbsencia;
+    // grupId, nomUsuari
+    public event Action<string, string>? UsuariEditant;
+    public event Action<string, string>? UsuariAbandonaEdicio;
     public event Action? Reconnectant;
     public event Action? Reconnectat;
     public event Action? Desconnectat;
@@ -50,6 +53,16 @@ public class SignalRService : IAsyncDisposable
                 AlertaAbsencia?.Invoke(alumneId, alumneNom, grupNom, missatge, esCritic);
             });
 
+        _hub.On<string, string>("UsuariEditant", (grupId, nomUsuari) =>
+        {
+            UsuariEditant?.Invoke(grupId, nomUsuari);
+        });
+
+        _hub.On<string, string>("UsuariAbandonaEdicio", (grupId, nomUsuari) =>
+        {
+            UsuariAbandonaEdicio?.Invoke(grupId, nomUsuari);
+        });
+
         _hub.Reconnecting += _ => { Reconnectant?.Invoke(); return Task.CompletedTask; };
         _hub.Reconnected += _ => { Reconnectat?.Invoke(); return Task.CompletedTask; };
         _hub.Closed += _ => { Desconnectat?.Invoke(); return Task.CompletedTask; };
@@ -67,6 +80,18 @@ public class SignalRService : IAsyncDisposable
     {
         if (_hub?.State == HubConnectionState.Connected)
             await _hub.InvokeAsync("LeaveGroup", grupId.ToString());
+    }
+
+    public async Task AnunciarEditantAsync(Guid grupId, string nomUsuari)
+    {
+        if (_hub?.State == HubConnectionState.Connected)
+            await _hub.InvokeAsync("AnunciarEditant", grupId.ToString(), nomUsuari);
+    }
+
+    public async Task AbandonarEdicioAsync(Guid grupId)
+    {
+        if (_hub?.State == HubConnectionState.Connected)
+            await _hub.InvokeAsync("AbandonarEdicio", grupId.ToString());
     }
 
     public async ValueTask DisposeAsync()
