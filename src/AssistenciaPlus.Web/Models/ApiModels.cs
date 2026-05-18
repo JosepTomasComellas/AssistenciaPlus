@@ -463,3 +463,16 @@ public record EnviarInformeTrimestralModel
     public int Trimestre { get; init; }
     public Guid AnyAcademicId { get; init; }
 }
+
+// ── IA / Consulta en llenguatge natural ────────────────────
+public record ConsultaIaRequest
+{
+    public string Pregunta { get; init; } = string.Empty;
+    public Guid AnyAcademicId { get; init; }
+}
+
+public record ConsultaIaModel
+{
+    public string Resposta { get; init; } = string.Empty;
+    public bool EstaDisponible { get; init; }
+}

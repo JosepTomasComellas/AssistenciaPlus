@@ -38,6 +38,7 @@ builder.Services.AddScoped<SignalRService>();
 builder.Services.AddScoped<NotificacioService>();
 builder.Services.AddScoped<IdiomesService>();
 builder.Services.AddScoped<BreadcrumbService>();
+builder.Services.AddScoped<IaService>();
 
 // MudBlazor
 builder.Services.AddMudServices(config =>

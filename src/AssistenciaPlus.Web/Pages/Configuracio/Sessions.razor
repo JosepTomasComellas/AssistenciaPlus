@@ -3,6 +3,7 @@
 @inject ConfiguracioService ConfiguracioService
 @inject GrupService GrupService
 @inject BreadcrumbService BreadcrumbService
+@inject IaService IaService
 
 <PageTitle>Traçabilitat — Configuració</PageTitle>
 
@@ -326,6 +327,76 @@ else
             }
         </MudTabPanel>
 
+        <!-- ══════════════ TAB 4: CONSULTA IA ══════════════ -->
+        <MudTabPanel Text="Consulta IA" Icon="@Icons.Material.Filled.Psychology">
+            <div style="max-width:720px">
+                <MudText Typo="Typo.subtitle1" Class="mb-1" Style="font-weight:600">
+                    Pregunta en llengua natural
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color:#718096" Class="mb-4">
+                    El model d'IA analitza les dades de l'any seleccionat i respon les teves preguntes sobre assistència.
+                    Les respostes es generen localment (Ollama · llama3.2).
+                </MudText>
+
+                <!-- Exemples ràpids -->
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    @foreach (var ex in _exemplesPreguntes)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                            Color="Color.Primary" OnClick="@(() => UsarExemple(ex))"
+                            Style="cursor:pointer">
+                            @ex
+                        </MudChip>
+                    }
+                </div>
+
+                <MudTextField @bind-Value="_preguntaIa"
+                    Label="Escriu la teva pregunta..."
+                    Variant="Variant.Outlined" Lines="3" Class="mb-3"
+                    Immediate="false" />
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                    StartIcon="@Icons.Material.Filled.Send"
+                    OnClick="ConsultarIaAsync"
+                    Disabled="@(_consultantIa || string.IsNullOrWhiteSpace(_preguntaIa))">
+                    @if (_consultantIa)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Consultant l'IA...</span>
+                    }
+                    else
+                    {
+                        <span>Consultar</span>
+                    }
+                </MudButton>
+
+                @if (_iaConsultat)
+                {
+                    @if (!_iaDisponible)
+                    {
+                        <MudAlert Severity="Severity.Warning" Class="mt-4">
+                            El servei d'IA (Ollama) no està disponible en aquest moment.
+                            Comprova que el contenidor Ollama s'està executant.
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudPaper Elevation="1" Class="pa-5 mt-4"
+                            Style="border-radius:12px;border-left:4px solid #2E7D32">
+                            <div class="d-flex align-center gap-2 mb-3">
+                                <MudIcon Icon="@Icons.Material.Filled.Psychology"
+                                    Style="color:#2E7D32" Size="Size.Small" />
+                                <MudText Typo="Typo.subtitle2" Style="font-weight:700;color:#2E7D32">
+                                    Resposta
+                                </MudText>
+                            </div>
+                            <MudText Style="white-space:pre-wrap;line-height:1.75">@_respostaIa</MudText>
+                        </MudPaper>
+                    }
+                }
+            </div>
+        </MudTabPanel>
+
     </MudTabs>
 }
 
@@ -503,6 +574,44 @@ else
         _mestresSenseLlista = await ConfiguracioService.GetMestresSenseLlistaAsync(_anySeleccionat);
         _carregantMestres = false;
         _mestresCarregat = true;
+        StateHasChanged();
+    }
+
+    // ── Consulta IA ─────────────────────────────────────────
+
+    private string _preguntaIa = string.Empty;
+    private string _respostaIa = string.Empty;
+    private bool _iaDisponible = true;
+    private bool _consultantIa = false;
+    private bool _iaConsultat = false;
+
+    private static readonly string[] _exemplesPreguntes =
+    [
+        "Qui ha faltat més avui?",
+        "Quants alumnes han superat el 10% d'absències?",
+        "Quins grups han passat llista avui?",
+        "Quina és la taxa d'absència global de l'any?",
+        "Quin alumne acumula més retards?"
+    ];
+
+    private void UsarExemple(string exemple) => _preguntaIa = exemple;
+
+    private async Task ConsultarIaAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_preguntaIa) || _anySeleccionat == Guid.Empty) return;
+        _consultantIa = true;
+        StateHasChanged();
+
+        var resultat = await IaService.ConsultarAsync(new ConsultaIaRequest
+        {
+            Pregunta = _preguntaIa,
+            AnyAcademicId = _anySeleccionat
+        });
+
+        _respostaIa = resultat.Resposta;
+        _iaDisponible = resultat.EstaDisponible;
+        _iaConsultat = true;
+        _consultantIa = false;
         StateHasChanged();
     }
 }
