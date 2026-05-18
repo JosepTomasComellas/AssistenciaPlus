@@ -31,7 +31,7 @@
         <MudTooltip Text="Triar data del calendari">
             <MudButton Variant="Variant.Text" Size="Size.Small"
                 StartIcon="@Icons.Material.Filled.CalendarMonth"
-                OnClick="@(() => _picker.OpenAsync())"
+                OnClick="ObrirPickerAsync"
                 Style="font-weight:700;color:#2E7D32;min-width:130px;font-size:0.9rem">
                 @_dataSeleccionada.ToString("dd/MM/yyyy")
             </MudButton>
@@ -56,14 +56,15 @@
     </div>
 </div>
 
-<!-- Picker ocult, s'obre programàticament via _picker.OpenAsync() -->
-<MudDatePicker @ref="_picker"
-    Date="_dataPickerValue"
-    DateChanged="OnDataCanviada"
-    DateFormat="dd/MM/yyyy"
-    MaxDate="@DateTime.Today"
-    PickerVariant="PickerVariant.Dialog"
-    Style="display:none" />
+<!-- Picker fora del flux visible però sempre renderitzat -->
+<div style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none">
+    <MudDatePicker @ref="_picker"
+        Date="_dataPickerValue"
+        DateChanged="OnDataPickerCanviada"
+        DateFormat="dd/MM/yyyy"
+        MaxDate="@DateTime.Today"
+        PickerVariant="PickerVariant.Dialog" />
+</div>
 
 @if (_carregant)
 {
@@ -373,7 +374,8 @@ else if (_fase == Fase.PassarLlista)
     private bool _carregant = true;
     private bool _modeFusteta;
     private bool _desant;
-    private MudDatePicker _picker = null!;
+    private MudDatePicker? _picker;
+    private bool _processantDataCanvi;
     private string _dataAvui = string.Empty;
     private DateOnly _dataSeleccionada = DateOnly.FromDateTime(DateTime.Today);
     private DateTime? _dataPickerValue = DateTime.Today;
@@ -503,6 +505,12 @@ else if (_fase == Fase.PassarLlista)
             _dataAvui = char.ToUpper(_dataAvui[0]) + _dataAvui[1..];
     }
 
+    private async Task ObrirPickerAsync()
+    {
+        if (_picker is not null)
+            await _picker.OpenAsync();
+    }
+
     private async Task DiaAnteriorAsync()
     {
         var nova = _dataSeleccionada.AddDays(-1);
@@ -519,22 +527,37 @@ else if (_fase == Fase.PassarLlista)
     private async Task AnirAvui()
         => await OnDataCanviada(DateTime.Today);
 
+    // Callback exclusiu del MudDatePicker — filtra dobles disparades
+    private async Task OnDataPickerCanviada(DateTime? novaData)
+    {
+        if (_processantDataCanvi) return;
+        await OnDataCanviada(novaData);
+    }
+
     private async Task OnDataCanviada(DateTime? novaData)
     {
-        if (!novaData.HasValue) return;
-        _dataSeleccionada = DateOnly.FromDateTime(novaData.Value);
-        _dataPickerValue = novaData;
-        ActualitzarDataAvui();
-        if (_grupSeleccionat != null)
+        if (!novaData.HasValue || _processantDataCanvi) return;
+        _processantDataCanvi = true;
+        try
         {
-            if (_fase == Fase.PassarLlista)
-                await SignalR.AbandonarEdicioAsync(_grupSeleccionat.Id);
-            await SignalR.AbandonarGrupAsync(_grupSeleccionat.Id);
+            _dataSeleccionada = DateOnly.FromDateTime(novaData.Value);
+            _dataPickerValue = novaData;
+            ActualitzarDataAvui();
+            if (_grupSeleccionat != null)
+            {
+                if (_fase == Fase.PassarLlista)
+                    await SignalR.AbandonarEdicioAsync(_grupSeleccionat.Id);
+                await SignalR.AbandonarGrupAsync(_grupSeleccionat.Id);
+            }
+            _grupSeleccionat = null;
+            _editorsActuals.Clear();
+            _fase = Fase.SeleccionarGrup;
+            ActualitzarBreadcrumbs();
         }
-        _grupSeleccionat = null;
-        _editorsActuals.Clear();
-        _fase = Fase.SeleccionarGrup;
-        ActualitzarBreadcrumbs();
+        finally
+        {
+            _processantDataCanvi = false;
+        }
     }
 
     private async Task SeleccionarGrup(GrupModel grup)
