@@ -12,11 +12,19 @@
 <PageTitle>Passar llista — AssistenciaPlus</PageTitle>
 
 <!-- Capçalera -->
-<div class="mb-5">
-    <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">Passar llista</MudText>
-    <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
-        @_dataAvui
-    </MudText>
+<div class="mb-5 d-flex align-center justify-space-between flex-wrap gap-3">
+    <div>
+        <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">Passar llista</MudText>
+        <MudText Typo="Typo.subtitle1" Style="color:#4A5568">@_dataAvui</MudText>
+    </div>
+    <MudDatePicker Date="_dataPickerValue"
+        DateChanged="OnDataCanviada"
+        Label="Data de la sessió"
+        Variant="Variant.Outlined"
+        DateFormat="dd/MM/yyyy"
+        MaxDate="@DateTime.Today"
+        Editable="true"
+        Style="max-width:200px" />
 </div>
 
 @if (_carregant)
@@ -284,7 +292,7 @@ else if (_fase == Fase.PassarLlista)
     }
     .grup-card:hover, .franja-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0,63,138,0.12) !important;
+        box-shadow: 0 8px 20px rgba(46,125,50,0.12) !important;
     }
     .franja-feta {
         opacity: 0.7;
@@ -301,6 +309,8 @@ else if (_fase == Fase.PassarLlista)
     private bool _modeFusteta;
     private bool _desant;
     private string _dataAvui = string.Empty;
+    private DateOnly _dataSeleccionada = _dataSeleccionada;
+    private DateTime? _dataPickerValue = DateTime.Today;
     private string? _observacioSessio;
 
     private List<GrupModel> _grups = [];
@@ -321,10 +331,7 @@ else if (_fase == Fase.PassarLlista)
     protected override async Task OnInitializedAsync()
     {
         ActualitzarBreadcrumbs();
-        var info = System.Globalization.CultureInfo.GetCultureInfo("ca-ES");
-        _dataAvui = DateTime.Today.ToString("dddd, d MMMM yyyy", info);
-        if (_dataAvui.Length > 0)
-            _dataAvui = char.ToUpper(_dataAvui[0]) + _dataAvui[1..];
+        ActualitzarDataAvui();
 
         _grups = await GrupService.GetGrupsAsync();
         _franjes = await GrupService.GetFranjesAsync();
@@ -390,14 +397,34 @@ else if (_fase == Fase.PassarLlista)
         }
     }
 
+    private void ActualitzarDataAvui()
+    {
+        var info = System.Globalization.CultureInfo.GetCultureInfo("ca-ES");
+        _dataAvui = _dataSeleccionada.ToDateTime(TimeOnly.MinValue).ToString("dddd, d MMMM yyyy", info);
+        if (_dataAvui.Length > 0)
+            _dataAvui = char.ToUpper(_dataAvui[0]) + _dataAvui[1..];
+    }
+
+    private async Task OnDataCanviada(DateTime? novaData)
+    {
+        if (!novaData.HasValue) return;
+        _dataSeleccionada = DateOnly.FromDateTime(novaData.Value);
+        _dataPickerValue = novaData;
+        ActualitzarDataAvui();
+        if (_grupSeleccionat != null)
+            await SignalR.AbandonarGrupAsync(_grupSeleccionat.Id);
+        _grupSeleccionat = null;
+        _fase = Fase.SeleccionarGrup;
+        ActualitzarBreadcrumbs();
+    }
+
     private async Task SeleccionarGrup(GrupModel grup)
     {
         if (_grupSeleccionat != null)
             await SignalR.AbandonarGrupAsync(_grupSeleccionat.Id);
 
         _grupSeleccionat = grup;
-        _registresAvui = await AssistenciaService.GetRegistresAsync(
-            grup.Id, DateOnly.FromDateTime(DateTime.Today));
+        _registresAvui = await AssistenciaService.GetRegistresAsync(grup.Id, _dataSeleccionada);
 
         await SignalR.UnirseAlGrupAsync(grup.Id);
         ActualitzarBreadcrumbs();
@@ -480,7 +507,7 @@ else if (_fase == Fase.PassarLlista)
                 {
                     GrupId = _grupSeleccionat!.Id,
                     FranjaHorariaId = franja.Id,
-                    Data = DateOnly.FromDateTime(DateTime.Today),
+                    Data = _dataSeleccionada,
                     Observacio = _observacioSessio,
                     Assistencies = _inputs
                 };
@@ -497,7 +524,7 @@ else if (_fase == Fase.PassarLlista)
                 Snackbar.Add(missatge, Severity.Success,
                     config => config.Icon = Icons.Material.Filled.CheckCircle);
                 _registresAvui = await AssistenciaService.GetRegistresAsync(
-                    _grupSeleccionat!.Id, DateOnly.FromDateTime(DateTime.Today));
+                    _grupSeleccionat!.Id, _dataSeleccionada);
             }
             else
             {

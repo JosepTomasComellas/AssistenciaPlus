@@ -46,3 +46,10 @@ public record EnviarInformeDto
     public int Mes { get; init; }
     public bool IncloureAdjuntPdf { get; init; } = true;
 }
+
+public record EnviarInformeTrimestralDto
+{
+    public Guid GrupId { get; init; }
+    public int Trimestre { get; init; }
+    public Guid AnyAcademicId { get; init; }
+}

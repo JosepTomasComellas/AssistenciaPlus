@@ -35,6 +35,20 @@ public class InformesService
         return (result?.Success == true, result?.Error);
     }
 
+    public async Task<(bool Ok, string? Error)> EnviarInformeTrimestralAsync(
+        Guid grupId, int trimestre, Guid anyAcademicId)
+    {
+        var dto = new EnviarInformeTrimestralModel
+        {
+            GrupId = grupId,
+            Trimestre = trimestre,
+            AnyAcademicId = anyAcademicId
+        };
+        var response = await _http.PostAsJsonAsync("informes/enviar-trimestral", dto);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
     public async Task<(byte[]? Data, string? NomFitxer, string? Error)> ExportarExcelMensualAsync(
         Guid grupId, int any, int mes)
     {

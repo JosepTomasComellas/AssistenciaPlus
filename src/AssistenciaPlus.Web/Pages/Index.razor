@@ -9,7 +9,7 @@
 
 <!-- Capçalera de benvinguda -->
 <div class="mb-6">
-    <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">
+    <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">
         Bon @_salutacio, @_nomUsuari
     </MudText>
     <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
@@ -94,8 +94,8 @@ else
     <MudGrid>
         <MudItem xs="6" sm="3">
             <MudPaper Class="pa-4 text-center" Elevation="1"
-                Style="border-radius:12px;border-left:4px solid #003F8A">
-                <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">
+                Style="border-radius:12px;border-left:4px solid #2E7D32">
+                <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">
                     @_grups.Sum(g => g.NombreAlumnes)
                 </MudText>
                 <MudText Typo="Typo.caption" Style="color:#718096;text-transform:uppercase;letter-spacing:0.05em">
@@ -137,6 +137,22 @@ else
             </MudPaper>
         </MudItem>
     </MudGrid>
+
+    @if (_donutData.Length > 0)
+    {
+        <MudPaper Elevation="1" Class="pa-5 mt-5" Style="border-radius:12px">
+            <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600">
+                Distribució de l'assistència avui
+            </MudText>
+            <div class="d-flex justify-center">
+                <MudChart ChartType="ChartType.Donut"
+                    InputData="@_donutData"
+                    InputLabels="@_donutLabels"
+                    Width="280px" Height="280px"
+                    ChartOptions="@(new ChartOptions { ChartPalette = ["#2E7D32", "#C62828", "#F57F17"] })" />
+            </div>
+        </MudPaper>
+    }
 }
 
 <style>
@@ -146,7 +162,7 @@ else
     }
     .grup-card:hover {
         transform: translateY(-3px);
-        box-shadow: 0 8px 24px rgba(0,63,138,0.15) !important;
+        box-shadow: 0 8px 24px rgba(46,125,50,0.15) !important;
     }
     .cursor-pointer { cursor: pointer; }
 </style>
@@ -159,6 +175,10 @@ else
     private string _dataAvui = string.Empty;
     private int _llistesPassades;
     private int _totalAbsents;
+    private int _totalPresents;
+    private int _totalTard;
+    private double[] _donutData = [];
+    private string[] _donutLabels = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -171,13 +191,11 @@ else
 
         var info = System.Globalization.CultureInfo.GetCultureInfo("ca-ES");
         _dataAvui = DateTime.Today.ToString("dddd, d MMMM yyyy", info);
-        // Capitalitzar primer caràcter
         if (_dataAvui.Length > 0)
             _dataAvui = char.ToUpper(_dataAvui[0]) + _dataAvui[1..];
 
         _grups = await GrupService.GetGrupsAsync();
 
-        // Comptar llistes i absències d'avui
         var avui = DateOnly.FromDateTime(DateTime.Today);
         foreach (var grup in _grups)
         {
@@ -185,10 +203,17 @@ else
             if (registres.Any())
             {
                 _llistesPassades++;
-                _totalAbsents += registres
-                    .SelectMany(r => r.Assistencies)
-                    .Count(a => a.Estat == EstatAssistencia.Absent);
+                var assistencies = registres.SelectMany(r => r.Assistencies).ToList();
+                _totalAbsents += assistencies.Count(a => a.Estat == EstatAssistencia.Absent);
+                _totalPresents += assistencies.Count(a => a.Estat == EstatAssistencia.Present);
+                _totalTard += assistencies.Count(a => a.Estat == EstatAssistencia.Tard);
             }
+        }
+
+        if (_totalPresents + _totalAbsents + _totalTard > 0)
+        {
+            _donutData = [(double)_totalPresents, (double)_totalAbsents, (double)_totalTard];
+            _donutLabels = [$"Presents ({_totalPresents})", $"Absents ({_totalAbsents})", $"Tard ({_totalTard})"];
         }
 
         _carregant = false;

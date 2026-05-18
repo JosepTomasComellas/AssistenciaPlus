@@ -379,3 +379,10 @@ public record EnviarInformeModel
     public int Mes { get; init; }
     public bool IncloureAdjuntPdf { get; init; } = true;
 }
+
+public record EnviarInformeTrimestralModel
+{
+    public Guid GrupId { get; init; }
+    public int Trimestre { get; init; }
+    public Guid AnyAcademicId { get; init; }
+}

@@ -10,7 +10,7 @@
 <PageTitle>Informes — AssistenciaPlus</PageTitle>
 
 <div class="mb-5">
-    <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">Informes d'assistència</MudText>
+    <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">Informes d'assistència</MudText>
     <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
         Consulta i exporta les dades d'assistència
     </MudText>
@@ -148,7 +148,7 @@
                     <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                         StartIcon="@Icons.Material.Filled.Email"
                         OnClick="EnviarInformeAsync"
-                        Disabled="_enviant">
+                        Disabled="@(_enviant || (_tipusInforme == "mensual" && _informe == null) || (_tipusInforme == "trimestral" && _informeTrimestral == null))">
                         @if (_enviant)
                         {
                             <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
@@ -190,13 +190,13 @@
             </MudItem>
             <MudItem xs="6" sm="3">
                 <MudPaper Class="pa-4 text-center" Elevation="0"
-                    Style="background:#EBF4FF;border-radius:8px">
+                    Style="background:#E8F5E9;border-radius:8px">
                     @{
                         var mitjana = alumnesInforme.Any()
                             ? alumnesInforme.Average(a => (double)a.PercentatgeAbsencia)
                             : 0;
                     }
-                    <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">
+                    <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">
                         @($"{mitjana:F1}")%
                     </MudText>
                     <MudText Typo="Typo.caption" Style="color:#718096">% absència mitjana</MudText>
@@ -206,7 +206,7 @@
 
         <!-- Taula d'alumnes -->
         <MudTable Items="alumnesInforme.OrderByDescending(a => a.PercentatgeAbsencia)"
-            Hover="true" Dense="false" Striped="true"
+            Hover="true" Dense="true" Striped="true"
             Style="border-radius:8px;overflow:hidden">
             <HeaderContent>
                 <MudTh>Alumne</MudTh>
@@ -373,11 +373,23 @@ else if (_errorInforme != null)
 
     private async Task EnviarInformeAsync()
     {
-        if (!_grupSeleccionat.HasValue || _informe == null) return;
+        if (!_grupSeleccionat.HasValue) return;
 
         _enviant = true;
-        var (ok, error) = await InformesService.EnviarInformeMensualAsync(
-            _grupSeleccionat.Value, _any, _mes);
+        bool ok = false; string? error = null;
+
+        if (_tipusInforme == "mensual")
+        {
+            if (_informe == null) { _enviant = false; return; }
+            (ok, error) = await InformesService.EnviarInformeMensualAsync(
+                _grupSeleccionat.Value, _any, _mes);
+        }
+        else
+        {
+            if (_informeTrimestral == null || _anyAcademicId == Guid.Empty) { _enviant = false; return; }
+            (ok, error) = await InformesService.EnviarInformeTrimestralAsync(
+                _grupSeleccionat.Value, _trimestre, _anyAcademicId);
+        }
 
         if (ok)
             Snackbar.Add("Informe enviat per correu correctament", Severity.Success);

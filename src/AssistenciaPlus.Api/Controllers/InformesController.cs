@@ -114,6 +114,30 @@ public class InformesController : ControllerBase
         return Ok(ApiResponse.Ok());
     }
 
+    /// <summary>
+    /// Envia l'informe trimestral per correu a la direcció de l'escola.
+    /// </summary>
+    [HttpPost("enviar-trimestral")]
+    [Authorize(Policy = "NomesEquipDirectiu")]
+    public async Task<ActionResult<ApiResponse>> EnviarInformeTrimestral(
+        [FromBody] EnviarInformeTrimestralDto dto, CancellationToken ct)
+    {
+        var informe = await _informesService.GenerarInformeTrimestralGrupAsync(
+            dto.GrupId, dto.Trimestre, dto.AnyAcademicId, ct);
+
+        var assumpte = $"Informe d'assistència {dto.Trimestre}r trimestre - {informe.GrupNom}";
+        var cosHtml = GenerarHtmlInformeTrimestral(informe);
+
+        var emailEscola = _config["Escola:EmailInformes"] ?? "a8059721@xtec.cat";
+        await _emailService.SendGenericEmailAsync(emailEscola, assumpte, cosHtml, ct);
+
+        _logger.LogInformation(
+            "Informe trimestral enviat: Grup {GrupNom}, T{Trimestre}",
+            informe.GrupNom, dto.Trimestre);
+
+        return Ok(ApiResponse.Ok());
+    }
+
     // ── Exportació Excel ─────────────────────────────────────
 
     /// <summary>Descarrega l'informe mensual en format Excel.</summary>
@@ -156,6 +180,33 @@ public class InformesController : ControllerBase
     }
 
     // ── Helpers ─────────────────────────────────────────────
+
+    private static string GenerarHtmlInformeTrimestral(InformeTrimestralDto informe)
+    {
+        var alumnesAlerta = informe.Alumnes.Where(a => a.EsAlerta && !a.EsCritic).ToList();
+        var alumnesCritic = informe.Alumnes.Where(a => a.EsCritic).ToList();
+
+        static string H(string? s) => WebUtility.HtmlEncode(s ?? string.Empty);
+
+        return $"""
+            <h2>Informe d'assistència {informe.Trimestre}r trimestre - {H(informe.GrupNom ?? informe.CicleNom)}</h2>
+            <p><strong>Any acadèmic:</strong> {H(informe.AnyAcademic)}</p>
+            <p><strong>Període:</strong> {informe.DataInici:dd/MM/yyyy} – {informe.DataFi:dd/MM/yyyy}</p>
+            <p><strong>Total alumnes:</strong> {informe.TotalAlumnes}</p>
+
+            <h3>Alumnes en situació crítica (&gt;25% absència)</h3>
+            {(alumnesCritic.Any()
+                ? $"<ul>{string.Join("", alumnesCritic.Select(a => $"<li><strong>{H(a.AlumneNom)}</strong> — {a.PercentatgeAbsencia}%</li>"))}</ul>"
+                : "<p>Cap alumne en situació crítica.</p>")}
+
+            <h3>Alumnes en alerta (&gt;10% absència)</h3>
+            {(alumnesAlerta.Any()
+                ? $"<ul>{string.Join("", alumnesAlerta.Select(a => $"<li>{H(a.AlumneNom)} — {a.PercentatgeAbsencia}%</li>"))}</ul>"
+                : "<p>Cap alumne en alerta.</p>")}
+
+            <p><em>Generat automàticament per AssistenciaPlus</em></p>
+            """;
+    }
 
     private static string GenerarHtmlInformeMensual(InformeMensualDto informe)
     {

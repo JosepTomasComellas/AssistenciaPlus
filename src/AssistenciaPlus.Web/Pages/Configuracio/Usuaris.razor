@@ -11,7 +11,7 @@
 <div class="mb-5">
     <div class="d-flex align-center justify-space-between flex-wrap gap-3">
         <div>
-            <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">Usuaris</MudText>
+            <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">Usuaris</MudText>
             <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
                 Gestió del personal del centre
             </MudText>
@@ -31,7 +31,7 @@
 else
 {
     <MudPaper Elevation="1" Style="border-radius:12px;overflow:hidden">
-        <MudTable Items="_usuaris" Hover="true" Dense="false"
+        <MudTable Items="_usuaris" Hover="true" Dense="true"
             Filter="FiltrarUsuari" @bind-SelectedItem="_usuariSeleccionat">
             <ToolBarContent>
                 <MudTextField @bind-Value="_cerca"

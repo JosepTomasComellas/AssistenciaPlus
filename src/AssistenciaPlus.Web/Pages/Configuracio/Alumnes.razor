@@ -10,7 +10,7 @@
 <PageTitle>Alumnes i grups — Configuració</PageTitle>
 
 <div class="mb-5">
-    <MudText Typo="Typo.h4" Style="font-weight:700;color:#003F8A">Alumnes i grups</MudText>
+    <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">Alumnes i grups</MudText>
     <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
         Gestió dels alumnes del centre
     </MudText>
@@ -91,7 +91,7 @@
     else
     {
         <MudPaper Elevation="1" Style="border-radius:12px;overflow:hidden">
-            <MudTable Items="_alumnes.OrderBy(a => a.Cognom1)" Hover="true" Dense="false">
+            <MudTable Items="_alumnes.OrderBy(a => a.Cognom1)" Hover="true" Dense="true">
                 <HeaderContent>
                     <MudTh Style="width:50px">#</MudTh>
                     <MudTh>Alumne/a</MudTh>

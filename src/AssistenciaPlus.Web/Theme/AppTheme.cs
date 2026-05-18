@@ -5,10 +5,10 @@ namespace AssistenciaPlus.Web.Theme;
 public static class AppTheme
 {
     // ── Colors de l'escola ─────────────────────────────────
-    // Basats en el branding institucional de l'Escola Marta Mata
-    public const string PrimaryColor = "#003F8A";      // Blau institucional
-    public const string SecondaryColor = "#E05B1A";    // Taronja càlid
-    public const string SuccessColor = "#2E7D32";      // Verd (present)
+    // Basats en el branding de l'Escola Marta Mata (Escola Verda)
+    public const string PrimaryColor = "#2E7D32";      // Verd institucional (Escola Verda)
+    public const string SecondaryColor = "#E05B1A";    // Taronja càlid (accentuat)
+    public const string SuccessColor = "#388E3C";      // Verd clar (present)
     public const string ErrorColor = "#C62828";        // Vermell (absent)
     public const string WarningColor = "#F57F17";      // Ambre (tard)
 
@@ -18,11 +18,11 @@ public static class AppTheme
         {
             Primary = PrimaryColor,
             PrimaryContrastText = "#FFFFFF",
-            PrimaryDarken = "#002B6A",
-            PrimaryLighten = "#1A5FAD",
+            PrimaryDarken = "#1B5E20",
+            PrimaryLighten = "#43A047",
             Secondary = SecondaryColor,
             SecondaryContrastText = "#FFFFFF",
-            Tertiary = "#2E7D32",
+            Tertiary = "#F57F17",
             TertiaryContrastText = "#FFFFFF",
             Background = "#F4F6FA",
             Surface = "#FFFFFF",
@@ -47,10 +47,10 @@ public static class AppTheme
             SuccessContrastText = "#FFFFFF",
             TableLines = "#E2E8F0",
             TableStriped = "#F7FAFC",
-            TableHover = "#EBF4FF",
+            TableHover = "#E8F5E9",
             Divider = "#E2E8F0",
             DividerLight = "#F0F4F8",
-            OverlayLight = "rgba(0,63,138,0.04)",
+            OverlayLight = "rgba(46,125,50,0.04)",
             OverlayDark = "rgba(0,0,0,0.5)",
             GrayLight = "#E2E8F0",
             GrayLighter = "#F7FAFC",

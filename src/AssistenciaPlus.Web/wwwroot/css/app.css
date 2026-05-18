@@ -25,7 +25,7 @@ html, body {
 
 /* ── Focus visible per accessibilitat ──────────────────── */
 *:focus-visible {
-    outline: 3px solid #003F8A;
+    outline: 3px solid #2E7D32;
     outline-offset: 2px;
     border-radius: 4px;
 }
@@ -34,7 +34,7 @@ html, body {
 
 /* AppBar sombra i gradient lleu */
 .mud-appbar {
-    background: linear-gradient(90deg, #002B6A 0%, #003F8A 100%) !important;
+    background: linear-gradient(90deg, #1B5E20 0%, #2E7D32 100%) !important;
 }
 
 /* Drawer amb scroll suau */
@@ -53,12 +53,12 @@ html, body {
 }
 
 .mud-nav-link:hover {
-    background: rgba(0, 63, 138, 0.08) !important;
+    background: rgba(46, 125, 50, 0.08) !important;
 }
 
 .mud-nav-link.active {
-    background: rgba(0, 63, 138, 0.12) !important;
-    color: #003F8A !important;
+    background: rgba(46, 125, 50, 0.12) !important;
+    color: #2E7D32 !important;
     font-weight: 600 !important;
 }
 
@@ -94,7 +94,7 @@ html, body {
     align-items: center;
     justify-content: center;
     height: 100vh;
-    background: linear-gradient(135deg, #002B6A 0%, #003F8A 100%);
+    background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
     color: white;
     gap: 20px;
 }
@@ -136,7 +136,7 @@ html, body {
 }
 
 #blazor-error-ui a {
-    color: #003F8A;
+    color: #2E7D32;
     font-weight: 600;
 }
 
@@ -156,7 +156,7 @@ html, body {
 
 /* Gradient text */
 .text-gradient {
-    background: linear-gradient(90deg, #003F8A, #1A5FAD);
+    background: linear-gradient(90deg, #2E7D32, #43A047);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
