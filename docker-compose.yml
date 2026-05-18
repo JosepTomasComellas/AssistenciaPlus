@@ -147,10 +147,7 @@ services:
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
     entrypoint: ["/bin/sh", "-c"]
     command: >
-      "ollama serve &
-      until curl -sf http://localhost:11434/api/tags > /dev/null; do sleep 2; done &&
-      ollama pull ${OLLAMA_MODEL:-llama3.2};
-      wait"
+      "ollama serve & sleep 10 && ollama pull ${OLLAMA_MODEL:-llama3.2}; wait"
     volumes:
       - ollama_data:/root/.ollama
     networks:
