@@ -1,51 +1,52 @@
 using System;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 
 #nullable disable
 
-namespace AssistenciaPlus.Infrastructure.Data.Migrations;
-
-[DbContext(typeof(AppDbContext))]
-[Migration("20260518100000_AddGrupMestre")]
-public partial class AddGrupMestre : Migration
+namespace AssistenciaPlus.Infrastructure.Data.Migrations
 {
-    protected override void Up(MigrationBuilder migrationBuilder)
+    /// <inheritdoc />
+    public partial class AddGrupMestre : Migration
     {
-        migrationBuilder.CreateTable(
-            name: "grups_mestres",
-            columns: table => new
-            {
-                grup_id = table.Column<Guid>(type: "uuid", nullable: false),
-                usuari_id = table.Column<Guid>(type: "uuid", nullable: false),
-                afegit_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false,
-                    defaultValueSql: "now()")
-            },
-            constraints: table =>
-            {
-                table.PrimaryKey("pk_grups_mestres", x => new { x.grup_id, x.usuari_id });
-                table.ForeignKey(
-                    name: "fk_grups_mestres_grups_grup_id",
-                    column: x => x.grup_id,
-                    principalTable: "grups",
-                    principalColumn: "id",
-                    onDelete: ReferentialAction.Cascade);
-                table.ForeignKey(
-                    name: "fk_grups_mestres_usuaris_usuari_id",
-                    column: x => x.usuari_id,
-                    principalTable: "usuaris",
-                    principalColumn: "id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.CreateTable(
+                name: "grups_mestres",
+                columns: table => new
+                {
+                    grup_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    usuari_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    afegit_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_grups_mestres", x => new { x.grup_id, x.usuari_id });
+                    table.ForeignKey(
+                        name: "fk_grups_mestres_grups_grup_id",
+                        column: x => x.grup_id,
+                        principalTable: "grups",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "fk_grups_mestres_usuaris_usuari_id",
+                        column: x => x.usuari_id,
+                        principalTable: "usuaris",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
 
-        migrationBuilder.CreateIndex(
-            name: "ix_grups_mestres_usuari_id",
-            table: "grups_mestres",
-            column: "usuari_id");
-    }
+            migrationBuilder.CreateIndex(
+                name: "ix_grups_mestres_usuari_id",
+                table: "grups_mestres",
+                column: "usuari_id");
+        }
 
-    protected override void Down(MigrationBuilder migrationBuilder)
-    {
-        migrationBuilder.DropTable(name: "grups_mestres");
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropTable(
+                name: "grups_mestres");
+        }
     }
 }

@@ -36,6 +36,7 @@ public class AppDbContext : DbContext
         // Filtres coherents per entitats dependents (evita WRN EF Core)
         modelBuilder.Entity<AssistenciaAlumne>().HasQueryFilter(aa => !aa.Alumne.IsDeleted);
         modelBuilder.Entity<RegistreAssistencia>().HasQueryFilter(r => !r.Grup.IsDeleted);
+        modelBuilder.Entity<GrupMestre>().HasQueryFilter(gm => !gm.Grup.IsDeleted);
 
         // ── AnyAcademic ────────────────────────────────────
         modelBuilder.Entity<AnyAcademic>(e =>
