@@ -31,7 +31,7 @@
         <MudTooltip Text="Triar data del calendari">
             <MudButton Variant="Variant.Text" Size="Size.Small"
                 StartIcon="@Icons.Material.Filled.CalendarMonth"
-                OnClick="@(() => _obrirPicker = true)"
+                OnClick="@(() => _picker.OpenAsync())"
                 Style="font-weight:700;color:#2E7D32;min-width:130px;font-size:0.9rem">
                 @_dataSeleccionada.ToString("dd/MM/yyyy")
             </MudButton>
@@ -56,15 +56,14 @@
     </div>
 </div>
 
-<!-- Picker ocult activat programàticament -->
+<!-- Picker ocult, s'obre programàticament via _picker.OpenAsync() -->
 <MudDatePicker @ref="_picker"
     Date="_dataPickerValue"
     DateChanged="OnDataCanviada"
     DateFormat="dd/MM/yyyy"
     MaxDate="@DateTime.Today"
     PickerVariant="PickerVariant.Dialog"
-    Style="display:none"
-    @bind-Open="_obrirPicker" />
+    Style="display:none" />
 
 @if (_carregant)
 {
@@ -374,7 +373,6 @@ else if (_fase == Fase.PassarLlista)
     private bool _carregant = true;
     private bool _modeFusteta;
     private bool _desant;
-    private bool _obrirPicker;
     private MudDatePicker _picker = null!;
     private string _dataAvui = string.Empty;
     private DateOnly _dataSeleccionada = DateOnly.FromDateTime(DateTime.Today);
