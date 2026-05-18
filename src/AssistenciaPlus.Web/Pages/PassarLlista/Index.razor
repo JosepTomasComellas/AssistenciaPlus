@@ -18,16 +18,53 @@
         <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">Passar llista</MudText>
         <MudText Typo="Typo.subtitle1" Style="color:#4A5568">@_dataAvui</MudText>
     </div>
-    <MudDatePicker Date="_dataPickerValue"
-        DateChanged="OnDataCanviada"
-        Label="Data de la sessió"
-        Variant="Variant.Outlined"
-        DateFormat="dd/MM/yyyy"
-        MaxDate="@DateTime.Today"
-        Editable="true"
-        PickerVariant="PickerVariant.Dialog"
-        Style="max-width:200px" />
+
+    <!-- Navegador de data -->
+    <div class="d-flex align-center gap-1" style="background:#F7FAF7;border:1px solid #C8E6C9;border-radius:24px;padding:4px 8px">
+        <MudTooltip Text="Dia anterior">
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                Size="Size.Small" Color="Color.Primary"
+                OnClick="DiaAnteriorAsync"
+                Disabled="@(_dataSeleccionada <= DateOnly.FromDateTime(DateTime.Today.AddDays(-60)))" />
+        </MudTooltip>
+
+        <MudTooltip Text="Triar data del calendari">
+            <MudButton Variant="Variant.Text" Size="Size.Small"
+                StartIcon="@Icons.Material.Filled.CalendarMonth"
+                OnClick="@(() => _obrirPicker = true)"
+                Style="font-weight:700;color:#2E7D32;min-width:130px;font-size:0.9rem">
+                @_dataSeleccionada.ToString("dd/MM/yyyy")
+            </MudButton>
+        </MudTooltip>
+
+        <MudTooltip Text="Dia següent">
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                Size="Size.Small" Color="Color.Primary"
+                OnClick="DiaSeguent"
+                Disabled="@(_dataSeleccionada >= DateOnly.FromDateTime(DateTime.Today))" />
+        </MudTooltip>
+
+        @if (_dataSeleccionada < DateOnly.FromDateTime(DateTime.Today))
+        {
+            <MudTooltip Text="Tornar a avui">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary"
+                    OnClick="AnirAvui" Style="cursor:pointer;font-weight:600">
+                    Avui
+                </MudChip>
+            </MudTooltip>
+        }
+    </div>
 </div>
+
+<!-- Picker ocult activat programàticament -->
+<MudDatePicker @ref="_picker"
+    Date="_dataPickerValue"
+    DateChanged="OnDataCanviada"
+    DateFormat="dd/MM/yyyy"
+    MaxDate="@DateTime.Today"
+    PickerVariant="PickerVariant.Dialog"
+    Style="display:none"
+    @bind-Open="_obrirPicker" />
 
 @if (_carregant)
 {
@@ -337,6 +374,8 @@ else if (_fase == Fase.PassarLlista)
     private bool _carregant = true;
     private bool _modeFusteta;
     private bool _desant;
+    private bool _obrirPicker;
+    private MudDatePicker _picker = null!;
     private string _dataAvui = string.Empty;
     private DateOnly _dataSeleccionada = DateOnly.FromDateTime(DateTime.Today);
     private DateTime? _dataPickerValue = DateTime.Today;
@@ -465,6 +504,22 @@ else if (_fase == Fase.PassarLlista)
         if (_dataAvui.Length > 0)
             _dataAvui = char.ToUpper(_dataAvui[0]) + _dataAvui[1..];
     }
+
+    private async Task DiaAnteriorAsync()
+    {
+        var nova = _dataSeleccionada.AddDays(-1);
+        await OnDataCanviada(nova.ToDateTime(TimeOnly.MinValue));
+    }
+
+    private async Task DiaSeguent()
+    {
+        if (_dataSeleccionada >= DateOnly.FromDateTime(DateTime.Today)) return;
+        var nova = _dataSeleccionada.AddDays(1);
+        await OnDataCanviada(nova.ToDateTime(TimeOnly.MinValue));
+    }
+
+    private async Task AnirAvui()
+        => await OnDataCanviada(DateTime.Today);
 
     private async Task OnDataCanviada(DateTime? novaData)
     {
