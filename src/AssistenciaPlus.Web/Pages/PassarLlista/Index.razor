@@ -309,7 +309,7 @@ else if (_fase == Fase.PassarLlista)
     private bool _modeFusteta;
     private bool _desant;
     private string _dataAvui = string.Empty;
-    private DateOnly _dataSeleccionada = _dataSeleccionada;
+    private DateOnly _dataSeleccionada = DateOnly.FromDateTime(DateTime.Today);
     private DateTime? _dataPickerValue = DateTime.Today;
     private string? _observacioSessio;
 
