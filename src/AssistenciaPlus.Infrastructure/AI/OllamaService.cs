@@ -9,7 +9,7 @@ namespace AssistenciaPlus.Infrastructure.AI;
 public class OllamaSettings
 {
     public string Url { get; set; } = "http://ollama:11434";
-    public string Model { get; set; } = "llama3.2";
+    public string Model { get; set; } = "llama3.2:1b";
     public int TimeoutSeconds { get; set; } = 120;
 }
 
@@ -44,7 +44,7 @@ public class OllamaService : IOllamaService
     {
         _httpClient = httpClient;
         _settings = settings.Value;
-        _httpClient.Timeout = TimeSpan.FromSeconds(_settings.TimeoutSeconds);
+        _httpClient.Timeout = Timeout.InfiniteTimeSpan; // timeout controlat per CTS per petició
         _httpClient.BaseAddress = new Uri(_settings.Url);
         _logger = logger;
     }
@@ -72,13 +72,14 @@ public class OllamaService : IOllamaService
                     }
                 },
                 stream = false,
-                options = new { temperature = 0.1, top_p = 0.9 }
+                options = new { temperature = 0.1, top_p = 0.9, num_ctx = 2048 }
             };
 
-            var response = await _httpClient.PostAsJsonAsync("/api/chat", request, ct);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_settings.TimeoutSeconds));
+            var response = await _httpClient.PostAsJsonAsync("/api/chat", request, cts.Token);
             response.EnsureSuccessStatusCode();
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(cts.Token);
             using var doc = JsonDocument.Parse(json);
 
             return doc.RootElement
@@ -100,7 +101,7 @@ public class OllamaService : IOllamaService
             const string exempleJson =
                 """{"dies":[{"data":"YYYY-MM-DD","tipus":"festiu","descripcio":"nom"},{"data":"YYYY-MM-DD","tipus":"noLectiu","descripcio":"nom"}]}""";
             const string buit = """{"dies":[]}""";
-            var text = textPdf[..Math.Min(textPdf.Length, 12000)];
+            var text = textPdf[..Math.Min(textPdf.Length, 4000)];
 
             var prompt = $"""
                 Ets un sistema d'extracció de dades de calendaris escolars.
@@ -129,10 +130,11 @@ public class OllamaService : IOllamaService
                 model = _settings.Model,
                 messages = new[] { new { role = "user", content = prompt } },
                 stream = false,
-                options = new { temperature = 0.0 }
+                options = new { temperature = 0.0, num_ctx = 2048, num_predict = 700 }
             };
 
-            var response = await _httpClient.PostAsJsonAsync("/api/chat", request, ct);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_settings.TimeoutSeconds));
+            var response = await _httpClient.PostAsJsonAsync("/api/chat", request, cts.Token);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -142,7 +144,7 @@ public class OllamaService : IOllamaService
 
             response.EnsureSuccessStatusCode();
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(cts.Token);
             using var doc = JsonDocument.Parse(json);
             return doc.RootElement.GetProperty("message").GetProperty("content").GetString() ?? "{}";
         }
