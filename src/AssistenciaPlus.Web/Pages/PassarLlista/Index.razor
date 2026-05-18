@@ -225,6 +225,23 @@ else if (_fase == Fase.PassarLlista)
         }
     </div>
 
+    <!-- Banner: actualització externa via SignalR -->
+    @if (_hiHaActualitzacioExterna)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-3" Dense="true">
+            <div class="d-flex align-center gap-3">
+                <span style="flex:1">
+                    Un altre usuari ha modificat l'assistència d'aquest grup.
+                </span>
+                <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Info"
+                    StartIcon="@Icons.Material.Filled.Refresh"
+                    OnClick="RefrescarSessioAsync">
+                    Actualitzar
+                </MudButton>
+            </div>
+        </MudAlert>
+    }
+
     <!-- Acció ràpida: tots presents -->
     <div class="d-flex gap-2 mb-4 flex-wrap">
         <MudButton Variant="Variant.Outlined" Color="Color.Success"
@@ -324,6 +341,7 @@ else if (_fase == Fase.PassarLlista)
     private FranjaHorariaModel? _franjaSeleccionada;
     private List<FranjaHorariaModel> _franjasADesar = [];
     private string _etiquetaFranja = string.Empty;
+    private bool _hiHaActualitzacioExterna;
 
 
     [SupplyParameterFromQuery]
@@ -392,10 +410,16 @@ else if (_fase == Fase.PassarLlista)
     {
         if (_grupSeleccionat?.Id.ToString() == groupId)
         {
-            Snackbar.Add("Un altre mestre ha actualitzat l'assistència d'aquest grup",
-                Severity.Info, c => c.Icon = Icons.Material.Filled.Sync);
+            _hiHaActualitzacioExterna = true;
             InvokeAsync(StateHasChanged);
         }
+    }
+
+    private async Task RefrescarSessioAsync()
+    {
+        _hiHaActualitzacioExterna = false;
+        _registresAvui = await AssistenciaService.GetRegistresAsync(_grupSeleccionat!.Id, _dataSeleccionada);
+        await CarregarFase3Async(_franjasADesar.FirstOrDefault()?.Id ?? Guid.Empty);
     }
 
     private void ActualitzarDataAvui()

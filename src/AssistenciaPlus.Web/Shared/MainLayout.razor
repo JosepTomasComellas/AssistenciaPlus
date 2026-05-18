@@ -49,13 +49,14 @@
                     title="@(Idiomes.EsCatala ? "Canviar a castellà" : "Cambiar a català")" />
 
                 <!-- Campana de notificacions -->
-                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                <MudMenu @ref="_menuNotif" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
                     Dense="true" Style="max-width:340px">
-                    <ActivatorContent Context="menuCtx">
+                    <ActivatorContent Context="notifCtx">
                         <MudBadge Content="@Notificacions.NoLlegides" Overlap="true"
                             Color="Color.Error" Visible="@(Notificacions.NoLlegides > 0)">
                             <MudIconButton Icon="@Icons.Material.Filled.Notifications"
-                                Color="Color.Inherit" title="Notificacions d'absència" />
+                                Color="Color.Inherit" title="Notificacions d'absència"
+                                OnClick="@(e => _menuNotif.OpenMenuAsync(e))" />
                         </MudBadge>
                     </ActivatorContent>
                     <ChildContent>
@@ -197,6 +198,7 @@
 @code {
     private bool _drawerOpen = true;
     private UsuariModel? _usuariActual;
+    private MudMenu _menuNotif = null!;
 
     protected override async Task OnInitializedAsync()
     {
