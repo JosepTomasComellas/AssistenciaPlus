@@ -19,19 +19,22 @@ public class AssistenciaController : BaseApiController
     private readonly IGrupRepository _grupRepo;
     private readonly IHubContext<Middleware.AttendanceHub> _hub;
     private readonly ILogger<AssistenciaController> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public AssistenciaController(
         IAssistenciaService assistenciaService,
         IAssistenciaRepository assistenciaRepo,
         IGrupRepository grupRepo,
         IHubContext<Middleware.AttendanceHub> hub,
-        ILogger<AssistenciaController> logger)
+        ILogger<AssistenciaController> logger,
+        IServiceScopeFactory scopeFactory)
     {
         _assistenciaService = assistenciaService;
         _assistenciaRepo = assistenciaRepo;
         _grupRepo = grupRepo;
         _hub = hub;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     /// <summary>
@@ -111,7 +114,12 @@ public class AssistenciaController : BaseApiController
 
             if (absentsSession.Count == 0) return;
 
-            var grup = await _grupRepo.GetByIdAmbDetallsAsync(dto.GrupId, ct);
+            // Scope propi per evitar usar el DbContext ja disposat del request original
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var grupRepo = scope.ServiceProvider.GetRequiredService<IGrupRepository>();
+            var assistenciaRepo = scope.ServiceProvider.GetRequiredService<IAssistenciaRepository>();
+
+            var grup = await grupRepo.GetByIdAmbDetallsAsync(dto.GrupId, ct);
             if (grup == null) return;
 
             var inicMes = new DateOnly(dto.Data.Year, dto.Data.Month, 1);
@@ -119,7 +127,7 @@ public class AssistenciaController : BaseApiController
 
             foreach (var alumneId in absentsSession)
             {
-                var assistencies = await _assistenciaRepo.GetAssistenciesAlumneAsync(
+                var assistencies = await assistenciaRepo.GetAssistenciesAlumneAsync(
                     alumneId, inicMes, fiMes, ct);
 
                 var totalAbsents = assistencies.Count(a =>
