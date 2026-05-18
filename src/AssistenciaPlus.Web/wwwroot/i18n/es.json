@@ -1,0 +1,139 @@
+{
+  "App": {
+    "Name": "AssistenciaPlus",
+    "Tagline": "Sistema de gestión de asistencia"
+  },
+  "Nav": {
+    "Dashboard": "Inicio",
+    "Attendance": "Asistencia",
+    "Students": "Alumnos",
+    "Groups": "Grupos",
+    "Schedules": "Horarios",
+    "Reports": "Informes",
+    "Users": "Usuarios",
+    "Settings": "Configuración",
+    "AcademicYears": "Años académicos",
+    "AIQuery": "Consulta IA"
+  },
+  "Auth": {
+    "Login": "Iniciar sesión",
+    "Logout": "Cerrar sesión",
+    "Email": "Correo electrónico",
+    "Password": "Contraseña",
+    "ForgotPassword": "¿Has olvidado la contraseña?",
+    "ChangePassword": "Cambiar contraseña",
+    "CurrentPassword": "Contraseña actual",
+    "NewPassword": "Nueva contraseña",
+    "ConfirmPassword": "Confirmar contraseña",
+    "Welcome": "Bienvenido/a",
+    "LoginError": "Credenciales incorrectas. Inténtalo de nuevo."
+  },
+  "Attendance": {
+    "Title": "Asistencia",
+    "TodaySessions": "Sesiones de hoy",
+    "OpenSession": "Abrir lista",
+    "CloseSession": "Cerrar lista",
+    "SessionOpen": "Lista abierta",
+    "SessionClosed": "Lista cerrada",
+    "SessionPending": "Pendiente",
+    "SessionCancelled": "Cancelada",
+    "Present": "Presente",
+    "Absent": "Ausente",
+    "Justified": "Justificado",
+    "Observation": "Observación",
+    "JustificationNote": "Motivo de la justificación",
+    "SaveAttendance": "Guardar asistencia",
+    "AllPresent": "Todos presentes",
+    "NoSessions": "No hay sesiones programadas para hoy",
+    "ModifiedBy": "Modificado por",
+    "RecordedBy": "Registrado por"
+  },
+  "Students": {
+    "Title": "Alumnos",
+    "FullName": "Nombre completo",
+    "FirstName": "Nombre",
+    "LastName": "Primer apellido",
+    "SecondLastName": "Segundo apellido",
+    "IdNumber": "NIA / DNI",
+    "Email": "Correo",
+    "Phone": "Teléfono",
+    "Group": "Grupo",
+    "Active": "Activo",
+    "Import": "Importar desde Excel (Esfera)",
+    "ImportSuccess": "Se han importado {0} alumnos correctamente",
+    "ImportErrors": "{0} filas con errores"
+  },
+  "Groups": {
+    "Title": "Grupos",
+    "Code": "Código",
+    "Name": "Nombre",
+    "Cycle": "Ciclo",
+    "CourseYear": "Curso",
+    "StudentCount": "Alumnos"
+  },
+  "Reports": {
+    "Title": "Informes",
+    "Filter": "Filtrar",
+    "Export": "Exportar Excel",
+    "ExportPDF": "Exportar PDF",
+    "DateFrom": "Desde",
+    "DateTo": "Hasta",
+    "AttendancePercentage": "% Asistencia",
+    "TotalSessions": "Total sesiones",
+    "TotalAbsences": "Total ausencias",
+    "Generate": "Generar informe"
+  },
+  "Users": {
+    "Title": "Usuarios",
+    "Role": "Rol",
+    "Roles": {
+      "Teacher": "Profesor/a",
+      "Management": "Equipo Directivo",
+      "Administrative": "Administrativo/a"
+    },
+    "Create": "Nuevo usuario",
+    "SendCredentials": "Enviar credenciales",
+    "Photo": "Foto",
+    "LastLogin": "Último acceso",
+    "Active": "Activo"
+  },
+  "AcademicYear": {
+    "Title": "Año académico",
+    "Name": "Nombre",
+    "StartDate": "Fecha de inicio",
+    "EndDate": "Fecha de fin",
+    "Active": "Activo",
+    "Activate": "Activar",
+    "Migrate": "Migrar a nuevo año"
+  },
+  "AI": {
+    "Title": "Consulta en lenguaje natural",
+    "Placeholder": "Escribe tu pregunta sobre los datos de asistencia...",
+    "Examples": "Ejemplos de consultas",
+    "Send": "Enviar",
+    "Thinking": "Procesando...",
+    "Unavailable": "El servicio de IA no está disponible en este momento",
+    "ExportResults": "Exportar resultados"
+  },
+  "Common": {
+    "Save": "Guardar",
+    "Cancel": "Cancelar",
+    "Delete": "Eliminar",
+    "Edit": "Editar",
+    "Create": "Crear",
+    "Search": "Buscar",
+    "Loading": "Cargando...",
+    "NoData": "No hay datos",
+    "Confirm": "Confirmar",
+    "Yes": "Sí",
+    "No": "No",
+    "Actions": "Acciones",
+    "Back": "Volver",
+    "Next": "Siguiente",
+    "Previous": "Anterior",
+    "Success": "Operación realizada correctamente",
+    "Error": "Se ha producido un error",
+    "Required": "Campo obligatorio",
+    "SelectAll": "Seleccionar todos"
+  }
+}

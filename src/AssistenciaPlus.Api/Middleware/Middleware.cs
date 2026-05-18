@@ -1,5 +1,6 @@
 using AssistenciaPlus.Core.Interfaces;
 using Microsoft.AspNetCore.SignalR;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
@@ -104,6 +105,9 @@ public class CurrentUserService : ICurrentUserService
 /// </summary>
 public class AttendanceHub : Hub
 {
+    // Tracking de qui està editant: connectionId → (grupId, nomUsuari)
+    private static readonly ConcurrentDictionary<string, (string GrupId, string NomUsuari)> _editors = new();
+
     public async Task JoinGroup(string groupId)
         => await Groups.AddToGroupAsync(Context.ConnectionId, $"group:{groupId}");
 
@@ -113,4 +117,30 @@ public class AttendanceHub : Hub
     public async Task NotifyAttendanceUpdated(string sessionId, string groupId)
         => await Clients.OthersInGroup($"group:{groupId}")
             .SendAsync("AttendanceUpdated", sessionId);
+
+    public async Task AnunciarEditant(string grupId, string nomUsuari)
+    {
+        _editors[Context.ConnectionId] = (grupId, nomUsuari);
+        await Clients.OthersInGroup($"group:{grupId}")
+            .SendAsync("UsuariEditant", grupId, nomUsuari);
+    }
+
+    public async Task AbandonarEdicio(string grupId)
+    {
+        if (_editors.TryRemove(Context.ConnectionId, out var editor))
+        {
+            await Clients.OthersInGroup($"group:{editor.GrupId}")
+                .SendAsync("UsuariAbandonaEdicio", editor.GrupId, editor.NomUsuari);
+        }
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        if (_editors.TryRemove(Context.ConnectionId, out var editor))
+        {
+            await Clients.OthersInGroup($"group:{editor.GrupId}")
+                .SendAsync("UsuariAbandonaEdicio", editor.GrupId, editor.NomUsuari);
+        }
+        await base.OnDisconnectedAsync(exception);
+    }
 }

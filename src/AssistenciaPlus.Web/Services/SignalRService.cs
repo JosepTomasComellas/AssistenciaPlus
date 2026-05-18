@@ -85,13 +85,15 @@ public class SignalRService : IAsyncDisposable
     public async Task AnunciarEditantAsync(Guid grupId, string nomUsuari)
     {
         if (_hub?.State == HubConnectionState.Connected)
-            await _hub.InvokeAsync("AnunciarEditant", grupId.ToString(), nomUsuari);
+            try { await _hub.InvokeAsync("AnunciarEditant", grupId.ToString(), nomUsuari); }
+            catch { /* mètode no disponible al servidor — ignorar */ }
     }
 
     public async Task AbandonarEdicioAsync(Guid grupId)
     {
         if (_hub?.State == HubConnectionState.Connected)
-            await _hub.InvokeAsync("AbandonarEdicio", grupId.ToString());
+            try { await _hub.InvokeAsync("AbandonarEdicio", grupId.ToString()); }
+            catch { /* mètode no disponible al servidor — ignorar */ }
     }
 
     public async ValueTask DisposeAsync()
