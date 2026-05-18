@@ -98,12 +98,29 @@ else
                         <MudChip T="string" Size="Size.Small" Color="Color.Info"
                             Style="height:18px;font-size:0.65rem;margin-left:6px">IA</MudChip>
                     </MudText>
-                    <MudText Typo="Typo.caption" Style="color:#718096" Class="mb-3">
+                    <MudText Typo="Typo.caption" Style="color:#718096" Class="mb-2">
                         Puja el PDF del calendari escolar publicat per l'escola.
                         La IA (Ollama) extraurà automàticament els dies festius.
                         Requereix que el PDF tingui text seleccionable.
                     </MudText>
-                    @if (!_importantPdf)
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3"
+                        Style="font-size:0.78rem;padding:4px 8px">
+                        El procés pot trigar entre 60 i 120 segons. No tanquis la pàgina mentre s'executa.
+                    </MudAlert>
+                    @if (_importantPdf)
+                    {
+                        <div class="d-flex align-center gap-2 mb-2">
+                            <MudProgressCircular Color="Color.Secondary" Indeterminate="true" Size="Size.Small" />
+                            <MudText Typo="Typo.caption" Style="color:#718096">
+                                Processant amb IA... <strong>@_segonsOllama s</strong>
+                                @if (_segonsOllama > 30)
+                                {
+                                    <span> · Gairebé llest</span>
+                                }
+                            </MudText>
+                        </div>
+                    }
+                    else
                     {
                         <InputFile id="inputPdf" OnChange="ImportarPdfAsync"
                             accept=".pdf,application/pdf" style="display:none" />
@@ -112,10 +129,6 @@ else
                         StartIcon="@Icons.Material.Filled.PictureAsPdf"
                         HtmlTag="label" for="inputPdf"
                         Disabled="@(_importantIcs || _importantPdf)">
-                        @if (_importantPdf)
-                        {
-                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
-                        }
                         Importar PDF
                     </MudButton>
                 </div>
@@ -238,6 +251,8 @@ else
     private bool _carregant = true;
     private bool _importantIcs;
     private bool _importantPdf;
+    private int _segonsOllama;
+    private CancellationTokenSource? _ctsPdf;
     private bool _dialogObert;
     private bool _desant;
 
@@ -318,6 +333,10 @@ else
     private async Task ImportarPdfAsync(InputFileChangeEventArgs e)
     {
         _importantPdf = true;
+        _segonsOllama = 0;
+        _ctsPdf = new CancellationTokenSource();
+        _ = ContarSegonesOllamaAsync(_ctsPdf.Token);
+
         try
         {
             var (ok, importats, error) = await ConfiguracioService.ImportarPdfAsync(_anySeleccionat!.Id, e.File);
@@ -327,7 +346,7 @@ else
                     Snackbar.Add("La IA no ha trobat dies especials al PDF. Revisa que el PDF tingui text seleccionable.", Severity.Warning);
                 else
                 {
-                    Snackbar.Add($"PDF processat per la IA: {importats} dies importats", Severity.Success);
+                    Snackbar.Add($"PDF processat per la IA en {_segonsOllama}s: {importats} dies importats", Severity.Success);
                     await CarregarDiesAsync();
                 }
             }
@@ -342,7 +361,20 @@ else
         }
         finally
         {
+            _ctsPdf.Cancel();
             _importantPdf = false;
+            _segonsOllama = 0;
+        }
+    }
+
+    private async Task ContarSegonesOllamaAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try { await Task.Delay(1000, ct); } catch { break; }
+            if (ct.IsCancellationRequested) break;
+            _segonsOllama++;
+            await InvokeAsync(StateHasChanged);
         }
     }
 

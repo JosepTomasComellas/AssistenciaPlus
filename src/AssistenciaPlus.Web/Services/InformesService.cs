@@ -64,6 +64,27 @@ public class InformesService
         return (bytes, nomFitxer.Trim('"'), null);
     }
 
+    public async Task<(byte[]? Data, string? NomFitxer, string? Error)> ExportarPdfAlumneAsync(
+        Guid alumneId, Guid grupId, string tipusPeriode,
+        int? any = null, int? mes = null, int? trimestre = null, Guid? anyAcademicId = null)
+    {
+        string url;
+        if (tipusPeriode == "mensual")
+            url = $"informes/pdf/alumne/{alumneId}?grupId={grupId}&tipusPeriode=mensual&any={any}&mes={mes}";
+        else
+            url = $"informes/pdf/alumne/{alumneId}?grupId={grupId}&tipusPeriode=trimestral&trimestre={trimestre}&anyAcademicId={anyAcademicId}";
+
+        var response = await _http.GetAsync(url);
+        if (!response.IsSuccessStatusCode)
+            return (null, null, "Error al generar el PDF");
+
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        var nomFitxer = response.Content.Headers.ContentDisposition?.FileNameStar
+            ?? response.Content.Headers.ContentDisposition?.FileName
+            ?? "informe_alumne.pdf";
+        return (bytes, nomFitxer.Trim('"'), null);
+    }
+
     public async Task<(byte[]? Data, string? NomFitxer, string? Error)> ExportarExcelTrimestralAsync(
         Guid grupId, int trimestre, Guid anyAcademicId)
     {

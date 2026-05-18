@@ -1,5 +1,34 @@
 @* Mode Fusteta Digital: targetes visuals per a infantil i primer cicle *@
 
+<!-- Barra resum d'estat -->
+<div class="d-flex gap-3 mb-3 flex-wrap">
+    <MudChip T="string" Icon="@Icons.Material.Filled.CheckCircle"
+        Color="Color.Success" Size="Size.Small" Style="font-weight:600">
+        @Inputs.Count(i => i.Estat == EstatAssistencia.Present) presents
+    </MudChip>
+    @if (Inputs.Any(i => i.Estat == EstatAssistencia.Absent))
+    {
+        <MudChip T="string" Icon="@Icons.Material.Filled.Cancel"
+            Color="Color.Error" Size="Size.Small" Style="font-weight:600">
+            @Inputs.Count(i => i.Estat == EstatAssistencia.Absent) absents
+        </MudChip>
+    }
+    @if (Inputs.Any(i => i.Estat == EstatAssistencia.Tard))
+    {
+        <MudChip T="string" Icon="@Icons.Material.Filled.AccessTime"
+            Color="Color.Warning" Size="Size.Small" Style="font-weight:600">
+            @Inputs.Count(i => i.Estat == EstatAssistencia.Tard) tard
+        </MudChip>
+    }
+    @if (Inputs.Any(i => i.Estat == EstatAssistencia.AbsenciaParcial))
+    {
+        <MudChip T="string" Icon="@Icons.Material.Filled.HistoryToggleOff"
+            Color="Color.Warning" Size="Size.Small" Style="font-weight:600">
+            @Inputs.Count(i => i.Estat == EstatAssistencia.AbsenciaParcial) parcial
+        </MudChip>
+    }
+</div>
+
 <div class="fusteta-grid">
     @foreach (var alumne in Alumnes)
     {

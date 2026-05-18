@@ -85,14 +85,67 @@ public class AssistenciaController : BaseApiController
 
         var registre = await _assistenciaService.DesarSessioCompletaAsync(dto, mestreId, ct);
 
-        // Notificació en temps real (event = "AssistenciaActualitzada", dos strings)
+        // Notificació en temps real — assistència actualitzada
         await _hub.Clients.Group($"group:{dto.GrupId}")
             .SendAsync("AssistenciaActualitzada",
                 dto.FranjaHorariaId.ToString(),
                 dto.GrupId.ToString(),
                 ct);
 
+        // Comprovació d'alertes en segon pla (no bloqueja la resposta, CT propi)
+        _ = EmitreAlertesAbsenciaAsync(dto, CancellationToken.None);
+
         return Ok(ApiResponse<RegistreAssistenciaDto>.Ok(registre));
+    }
+
+    private async Task EmitreAlertesAbsenciaAsync(DesarSessioDto dto, CancellationToken ct)
+    {
+        try
+        {
+            var absentsSession = dto.Assistencies
+                .Where(a => a.Estat == EstatAssistencia.Absent)
+                .Select(a => a.AlumneId)
+                .ToList();
+
+            if (absentsSession.Count == 0) return;
+
+            var grup = await _grupRepo.GetByIdAmbDetallsAsync(dto.GrupId, ct);
+            if (grup == null) return;
+
+            var inicMes = new DateOnly(dto.Data.Year, dto.Data.Month, 1);
+            var fiMes = inicMes.AddMonths(1).AddDays(-1);
+
+            foreach (var alumneId in absentsSession)
+            {
+                var assistencies = await _assistenciaRepo.GetAssistenciesAlumneAsync(
+                    alumneId, inicMes, fiMes, ct);
+
+                var totalAbsents = assistencies.Count(a =>
+                    a.Estat == Domain.Entities.EstatAssistencia.Absent);
+
+                if (totalAbsents < 3) continue;
+
+                var alumne = grup.Alumnes.FirstOrDefault(a => a.Id == alumneId);
+                if (alumne == null) continue;
+
+                var esCritic = totalAbsents >= 6;
+                var missatge = esCritic
+                    ? $"Situació crítica: {totalAbsents} absències aquest mes"
+                    : $"En alerta: {totalAbsents} absències aquest mes";
+
+                await _hub.Clients.All.SendAsync("AlertaAbsencia",
+                    alumneId.ToString(),
+                    alumne.NomComplet,
+                    grup.NomComplet,
+                    missatge,
+                    esCritic,
+                    ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error en emetre alertes d'absència per grup {GrupId}", dto.GrupId);
+        }
     }
 
     /// <summary>

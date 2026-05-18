@@ -214,6 +214,7 @@
                 <MudTh Style="text-align:center">Absents</MudTh>
                 <MudTh Style="text-align:center">% Absència</MudTh>
                 <MudTh Style="text-align:center">Estat</MudTh>
+                <MudTh Style="text-align:center">PDF</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd>
@@ -250,6 +251,15 @@
                         </MudChip>
                     }
                 </MudTd>
+                <MudTd Style="text-align:center">
+                    <MudTooltip Text="Descarregar informe PDF d'aquest alumne">
+                        <MudIconButton Icon="@Icons.Material.Filled.PictureAsPdf"
+                            Size="Size.Small"
+                            Color="Color.Error"
+                            Disabled="@_descarregantPdf.Contains(context.AlumneId)"
+                            OnClick="@(() => DescarregarPdfAlumneAsync(context.AlumneId))" />
+                    </MudTooltip>
+                </MudTd>
             </RowTemplate>
         </MudTable>
     </MudPaper>
@@ -271,6 +281,7 @@ else if (_errorInforme != null)
     private bool _generant;
     private bool _enviant;
     private bool _exportant;
+    private readonly HashSet<Guid> _descarregantPdf = [];
     private InformeMensualModel? _informe;
     private InformeTrimestralModel? _informeTrimestral;
     private string? _errorInforme;
@@ -397,6 +408,33 @@ else if (_errorInforme != null)
             Snackbar.Add(error ?? "Error al enviar l'informe", Severity.Error);
 
         _enviant = false;
+    }
+
+    private async Task DescarregarPdfAlumneAsync(Guid alumneId)
+    {
+        if (!_grupSeleccionat.HasValue) return;
+        _descarregantPdf.Add(alumneId);
+        try
+        {
+            byte[]? data; string? nom; string? error;
+            if (_tipusInforme == "mensual")
+                (data, nom, error) = await InformesService.ExportarPdfAlumneAsync(
+                    alumneId, _grupSeleccionat.Value, "mensual", any: _any, mes: _mes);
+            else
+                (data, nom, error) = await InformesService.ExportarPdfAlumneAsync(
+                    alumneId, _grupSeleccionat.Value, "trimestral",
+                    trimestre: _trimestre, anyAcademicId: _anyAcademicId);
+
+            if (data != null)
+                await JS.InvokeVoidAsync("downloadFile", nom, "application/pdf", data);
+            else
+                Snackbar.Add(error ?? "Error en generar el PDF", Severity.Error);
+        }
+        catch
+        {
+            Snackbar.Add("Error en descarregar el PDF", Severity.Error);
+        }
+        _descarregantPdf.Remove(alumneId);
     }
 
     private static string GetPercentatgeStyle(InformeAlumneModel a)

@@ -3,6 +3,8 @@
 @inject IdiomesService Idiomes
 @inject BreadcrumbService Breadcrumbs
 @inject NavigationManager Nav
+@inject SignalRService SignalR
+@inject NotificacioService Notificacions
 @implements IDisposable
 
 <AuthorizeView>
@@ -45,6 +47,67 @@
                     Color="Color.Inherit" ToggledColor="Color.Inherit"
                     Style="font-size:0.7rem;font-weight:700;min-width:36px"
                     title="@(Idiomes.EsCatala ? "Canviar a castellà" : "Cambiar a català")" />
+
+                <!-- Campana de notificacions -->
+                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                    Dense="true" Style="max-width:340px">
+                    <ActivatorContent Context="menuCtx">
+                        <MudBadge Content="@Notificacions.NoLlegides" Overlap="true"
+                            Color="Color.Error" Visible="@(Notificacions.NoLlegides > 0)">
+                            <MudIconButton Icon="@Icons.Material.Filled.Notifications"
+                                Color="Color.Inherit" title="Notificacions d'absència" />
+                        </MudBadge>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <div style="min-width:280px;max-width:340px">
+                            <div class="d-flex align-center justify-space-between pa-3 pb-1">
+                                <MudText Typo="Typo.subtitle2" Style="font-weight:700">
+                                    Alertes d'absència
+                                </MudText>
+                                @if (Notificacions.NoLlegides > 0)
+                                {
+                                    <MudButton Size="Size.Small" Variant="Variant.Text"
+                                        OnClick="@(() => Notificacions.EsborrarTotes())">
+                                        Netejar
+                                    </MudButton>
+                                }
+                            </div>
+                            <MudDivider />
+                            @if (!Notificacions.Alertes.Any())
+                            {
+                                <div class="pa-4 text-center">
+                                    <MudText Typo="Typo.body2" Style="color:#A0AEC0">
+                                        Cap alerta activa
+                                    </MudText>
+                                </div>
+                            }
+                            else
+                            {
+                                @foreach (var alerta in Notificacions.Alertes.Take(8))
+                                {
+                                    <div class="pa-2" style="border-bottom:1px solid #F0F0F0">
+                                        <div class="d-flex align-start gap-2">
+                                            <MudIcon Icon="@(alerta.EsCritic ? Icons.Material.Filled.Warning : Icons.Material.Filled.Info)"
+                                                Size="Size.Small"
+                                                Style="@($"color:{(alerta.EsCritic ? "#C62828" : "#F57F17")};margin-top:2px;flex-shrink:0")" />
+                                            <div>
+                                                <MudText Typo="Typo.body2" Style="font-weight:600;line-height:1.2">
+                                                    @alerta.AlumneNom
+                                                </MudText>
+                                                <MudText Typo="Typo.caption" Style="color:#718096">
+                                                    @alerta.GrupNom · @alerta.Missatge
+                                                </MudText>
+                                                <MudText Typo="Typo.caption" Style="color:#A0AEC0">
+                                                    @alerta.Moment.ToString("HH:mm")
+                                                </MudText>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </ChildContent>
+                </MudMenu>
 
                 <!-- Usuari actual -->
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
@@ -139,13 +202,40 @@
     {
         Idiomes.IdiomaCanviat += OnIdiomaCanviat;
         Breadcrumbs.OnChange += OnBreadcrumbsCanviat;
+        Notificacions.OnChange += OnNotificacioCanviada;
         _usuariActual = await AuthService.GetCurrentUserFromApiAsync();
+
+        // Connecta SignalR per rebre alertes d'absència (no bloqueja la càrrega)
+        _ = ConnectarSignalRAsync();
     }
+
+    private async Task ConnectarSignalRAsync()
+    {
+        try
+        {
+            await SignalR.ConnectarAsync();
+            SignalR.AlertaAbsencia += OnAlertaAbsencia;
+        }
+        catch { /* SignalR no és crític */ }
+    }
+
+    private void OnAlertaAbsencia(
+        string alumneId, string alumneNom, string grupNom, string missatge, bool esCritic)
+    {
+        var alerta = new NotificacioModel(
+            Guid.TryParse(alumneId, out var id) ? id : Guid.Empty,
+            alumneNom, grupNom, missatge, DateTime.Now, esCritic);
+        Notificacions.AfegirAlerta(alerta);
+    }
+
+    private void OnNotificacioCanviada() => InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {
         Idiomes.IdiomaCanviat -= OnIdiomaCanviat;
         Breadcrumbs.OnChange -= OnBreadcrumbsCanviat;
+        Notificacions.OnChange -= OnNotificacioCanviada;
+        SignalR.AlertaAbsencia -= OnAlertaAbsencia;
     }
 
     private void OnBreadcrumbsCanviat() => InvokeAsync(StateHasChanged);

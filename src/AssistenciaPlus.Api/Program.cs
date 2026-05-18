@@ -9,6 +9,7 @@ using AssistenciaPlus.Core.Interfaces;
 using AssistenciaPlus.Infrastructure.AI;
 using AssistenciaPlus.Infrastructure.Email;
 using AssistenciaPlus.Infrastructure.Excel;
+using AssistenciaPlus.Infrastructure.PDF;
 using AssistenciaPlus.Infrastructure.Repositories;
 using AssistenciaPlus.Infrastructure.Data;
 using AssistenciaPlus.Infrastructure.Redis;
@@ -146,6 +147,7 @@ try
     builder.Services.AddScoped<IExcelImportService, ExcelImportService>();
     builder.Services.AddScoped<IExcelExportService, ExcelExportService>();
     builder.Services.AddScoped<InformesExcelService>();
+    builder.Services.AddScoped<InformesPdfService>();
 
     // ── Ollama IA ─────────────────────────────────────────────
     builder.Services.Configure<OllamaSettings>(builder.Configuration.GetSection("Ollama"));

@@ -3,6 +3,7 @@ using AssistenciaPlus.Application.DTOs;
 using AssistenciaPlus.Application.Interfaces;
 using AssistenciaPlus.Core.Interfaces;
 using AssistenciaPlus.Infrastructure.Excel;
+using AssistenciaPlus.Infrastructure.PDF;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
@@ -17,6 +18,7 @@ public class InformesController : ControllerBase
     private readonly IInformesService _informesService;
     private readonly IEmailService _emailService;
     private readonly InformesExcelService _excelService;
+    private readonly InformesPdfService _pdfService;
     private readonly IConfiguration _config;
     private readonly ILogger<InformesController> _logger;
 
@@ -24,12 +26,14 @@ public class InformesController : ControllerBase
         IInformesService informesService,
         IEmailService emailService,
         InformesExcelService excelService,
+        InformesPdfService pdfService,
         IConfiguration config,
         ILogger<InformesController> logger)
     {
         _informesService = informesService;
         _emailService = emailService;
         _excelService = excelService;
+        _pdfService = pdfService;
         _config = config;
         _logger = logger;
     }
@@ -177,6 +181,66 @@ public class InformesController : ControllerBase
         return File(bytes,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             nomFitxer);
+    }
+
+    // ── Exportació PDF individual ─────────────────────────────
+
+    /// <summary>
+    /// Descarrega l'informe individual d'un alumne en format PDF.
+    /// tipusPeriode = "mensual" (requereix any+mes) | "trimestral" (requereix trimestre+anyAcademicId)
+    /// </summary>
+    [HttpGet("pdf/alumne/{alumneId:guid}")]
+    public async Task<IActionResult> ExportPdfAlumne(
+        Guid alumneId,
+        [FromQuery] string tipusPeriode,
+        [FromQuery] Guid grupId,
+        [FromQuery] int? any,
+        [FromQuery] int? mes,
+        [FromQuery] int? trimestre,
+        [FromQuery] Guid? anyAcademicId,
+        CancellationToken ct)
+    {
+        InformeAlumneDto? alumneDto = null;
+        string periodeNom;
+        string anyAcademic;
+
+        if (tipusPeriode == "mensual")
+        {
+            if (any == null || mes == null)
+                return BadRequest("Cal indicar any i mes per a l'informe mensual");
+
+            var informe = await _informesService.GenerarInformeMensualGrupAsync(
+                grupId, any.Value, mes.Value, ct);
+            alumneDto = informe.Alumnes.FirstOrDefault(a => a.AlumneId == alumneId);
+
+            var nomMes = new System.Globalization.CultureInfo("ca-ES")
+                .DateTimeFormat.GetMonthName(mes.Value);
+            periodeNom = $"{nomMes} {any}";
+            anyAcademic = informe.AnyAcademic;
+        }
+        else if (tipusPeriode == "trimestral")
+        {
+            if (trimestre == null || anyAcademicId == null)
+                return BadRequest("Cal indicar trimestre i anyAcademicId per a l'informe trimestral");
+
+            var informe = await _informesService.GenerarInformeTrimestralGrupAsync(
+                grupId, trimestre.Value, anyAcademicId.Value, ct);
+            alumneDto = informe.Alumnes.FirstOrDefault(a => a.AlumneId == alumneId);
+            periodeNom = $"{trimestre}r trimestre ({informe.DataInici:dd/MM/yyyy} – {informe.DataFi:dd/MM/yyyy})";
+            anyAcademic = informe.AnyAcademic;
+        }
+        else
+        {
+            return BadRequest("tipusPeriode ha de ser 'mensual' o 'trimestral'");
+        }
+
+        if (alumneDto == null)
+            return NotFound("Alumne no trobat en l'informe");
+
+        var bytes = _pdfService.GenerarInformeAlumne(alumneDto, periodeNom, anyAcademic);
+        var nomFitxer = $"assistencia_{alumneDto.AlumneNom.Replace(" ", "_")}_{periodeNom.Replace(" ", "_")}.pdf";
+
+        return File(bytes, "application/pdf", nomFitxer);
     }
 
     // ── Helpers ─────────────────────────────────────────────

@@ -10,6 +10,8 @@ public class SignalRService : IAsyncDisposable
     private HubConnection? _hub;
 
     public event Action<string, string>? AssistenciaActualitzada;
+    // alumneId, alumneNom, grupNom, missatge, esCritic
+    public event Action<string, string, string, string, bool>? AlertaAbsencia;
     public event Action? Reconnectant;
     public event Action? Reconnectat;
     public event Action? Desconnectat;
@@ -41,6 +43,12 @@ public class SignalRService : IAsyncDisposable
         {
             AssistenciaActualitzada?.Invoke(franjaId, groupId);
         });
+
+        _hub.On<string, string, string, string, bool>("AlertaAbsencia",
+            (alumneId, alumneNom, grupNom, missatge, esCritic) =>
+            {
+                AlertaAbsencia?.Invoke(alumneId, alumneNom, grupNom, missatge, esCritic);
+            });
 
         _hub.Reconnecting += _ => { Reconnectant?.Invoke(); return Task.CompletedTask; };
         _hub.Reconnected += _ => { Reconnectat?.Invoke(); return Task.CompletedTask; };

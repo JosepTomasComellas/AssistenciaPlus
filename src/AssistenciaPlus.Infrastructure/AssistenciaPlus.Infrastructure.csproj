@@ -34,6 +34,9 @@
     <!-- BCrypt per hash de contrasenyes -->
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
 
+    <!-- Generació de PDFs -->
+    <PackageReference Include="PdfPig" Version="0.1.9" />
+
     <!-- Logging -->
     <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.4" />
