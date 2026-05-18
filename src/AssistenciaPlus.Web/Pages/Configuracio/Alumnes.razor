@@ -527,7 +527,7 @@
         await Task.WhenAll(tGrups, tUsuaris);
         _grups = tGrups.Result;
         _mestres = tUsuaris.Result
-            .Where(u => u.Rol == "Mestre" && u.EsActiu)
+            .Where(u => u.EsActiu)
             .OrderBy(u => u.NomComplet).ToList();
         _cicles = await GrupService.GetCiclesAsync();
     }
