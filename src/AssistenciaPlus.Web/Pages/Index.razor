@@ -138,21 +138,27 @@ else
         </MudItem>
     </MudGrid>
 
-    @if (_donutData.Length > 0)
-    {
-        <MudPaper Elevation="1" Class="pa-5 mt-5" Style="border-radius:12px">
-            <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600">
-                Distribució de l'assistència avui
-            </MudText>
+    <MudPaper Elevation="1" Class="pa-5 mt-5" Style="border-radius:12px">
+        <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600">
+            Distribució de l'assistència avui
+        </MudText>
+        @if (_donutData.Length > 0)
+        {
             <div class="d-flex justify-center">
                 <MudChart T="double" ChartType="ChartType.Donut"
                     InputData="@_donutData"
                     InputLabels="@_donutLabels"
                     Width="280px" Height="280px"
-                    ChartOptions="@(new ChartOptions { ChartPalette = ["#2E7D32", "#C62828", "#F57F17"] })" />
+                    ChartOptions="@(new ChartOptions { ChartPalette = _donutPalette })" />
             </div>
-        </MudPaper>
-    }
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Style="color:#A0AEC0;text-align:center;padding:32px 0">
+                Sense dades d'avui. Passa llista per veure l'estadística.
+            </MudText>
+        }
+    </MudPaper>
 }
 
 <style>
@@ -179,6 +185,7 @@ else
     private int _totalTard;
     private double[] _donutData = [];
     private string[] _donutLabels = [];
+    private string[] _donutPalette = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -210,11 +217,14 @@ else
             }
         }
 
-        if (_totalPresents + _totalAbsents + _totalTard > 0)
-        {
-            _donutData = [(double)_totalPresents, (double)_totalAbsents, (double)_totalTard];
-            _donutLabels = [$"Presents ({_totalPresents})", $"Absents ({_totalAbsents})", $"Tard ({_totalTard})"];
-        }
+        // Construïm el donut filtrant els valors zero (MudChart no els renderitza bé)
+        var slices = new List<(double Val, string Label)>();
+        if (_totalPresents > 0) slices.Add((_totalPresents, $"Presents ({_totalPresents})"));
+        if (_totalAbsents > 0) slices.Add((_totalAbsents, $"Absents ({_totalAbsents})"));
+        if (_totalTard > 0) slices.Add((_totalTard, $"Tard ({_totalTard})"));
+        _donutData = [..slices.Select(s => s.Val)];
+        _donutLabels = [..slices.Select(s => s.Label)];
+        _donutPalette = slices.Select(s => s.Label.StartsWith("P") ? "#2E7D32" : s.Label.StartsWith("A") ? "#C62828" : "#F57F17").ToArray();
 
         _carregant = false;
     }

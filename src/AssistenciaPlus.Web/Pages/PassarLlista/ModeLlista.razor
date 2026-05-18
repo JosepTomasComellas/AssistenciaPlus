@@ -44,23 +44,30 @@
                                 Icon="@Icons.Material.Filled.CheckCircle"
                                 Color="@(input.Estat == EstatAssistencia.Present ? Color.Success : Color.Default)"
                                 Size="Size.Medium"
-                                OnClick="() => { input.Estat = EstatAssistencia.Present; input.Motiu = null; }"
+                                OnClick="() => { input.Estat = EstatAssistencia.Present; input.Motiu = null; input.Observacio = null; }"
                                 Class="@(input.Estat == EstatAssistencia.Present ? "estat-actiu" : "")" />
                         </MudTooltip>
-                        <MudTooltip Text="Absent">
+                        <MudTooltip Text="Absent (sense motiu)">
                             <MudIconButton
                                 Icon="@Icons.Material.Filled.Cancel"
                                 Color="@(input.Estat == EstatAssistencia.Absent ? Color.Error : Color.Default)"
                                 Size="Size.Medium"
-                                OnClick="() => ObrirDetallAbsencia(input, alumne)"
+                                OnClick="() => { input.Estat = EstatAssistencia.Absent; input.Motiu = null; input.Observacio = null; }"
                                 Class="@(input.Estat == EstatAssistencia.Absent ? "estat-actiu" : "")" />
+                        </MudTooltip>
+                        <MudTooltip Text="Absent (afegir motiu)">
+                            <MudIconButton
+                                Icon="@Icons.Material.Filled.EditNote"
+                                Color="@(input.Estat == EstatAssistencia.Absent && input.Motiu.HasValue ? Color.Secondary : Color.Default)"
+                                Size="Size.Medium"
+                                OnClick="() => ObrirDetallAbsencia(input, alumne)" />
                         </MudTooltip>
                         <MudTooltip Text="Tard">
                             <MudIconButton
                                 Icon="@Icons.Material.Filled.AccessTime"
                                 Color="@(input.Estat == EstatAssistencia.Tard ? Color.Warning : Color.Default)"
                                 Size="Size.Medium"
-                                OnClick="() => { input.Estat = EstatAssistencia.Tard; }" />
+                                OnClick="() => { input.Estat = EstatAssistencia.Tard; input.Motiu = null; }" />
                         </MudTooltip>
                     </div>
                 </div>
