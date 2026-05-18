@@ -47,7 +47,6 @@ else
                     <MudTh>2n Trimestre</MudTh>
                     <MudTh>3r Trimestre</MudTh>
                     <MudTh Style="text-align:center">Estat</MudTh>
-                    <MudTh Style="text-align:center">Activar</MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd>
@@ -75,18 +74,13 @@ else
                     <MudTd Style="text-align:center">
                         @if (context.EsActiu)
                         {
-                            <MudChip T="string" Color="Color.Success" Size="Size.Small">Actiu</MudChip>
+                            <MudChip T="string" Icon="@Icons.Material.Filled.CheckCircle"
+                                Color="Color.Success" Size="Size.Small">Actiu</MudChip>
                         }
                         else
                         {
-                            <MudChip T="string" Color="Color.Default" Size="Size.Small">Inactiu</MudChip>
-                        }
-                    </MudTd>
-                    <MudTd Style="text-align:center">
-                        @if (!context.EsActiu)
-                        {
                             <MudButton Variant="Variant.Outlined" Color="Color.Primary"
-                                Size="Size.Small"
+                                Size="Size.Small" StartIcon="@Icons.Material.Filled.PlayArrow"
                                 OnClick="() => ActivarAnyAcademicAsync(context.Id)">
                                 Activar
                             </MudButton>
