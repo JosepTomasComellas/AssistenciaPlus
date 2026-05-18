@@ -62,6 +62,7 @@ public class ConfiguracioController : ControllerBase
 
     /// <summary>Llista tots els anys acadèmics.</summary>
     [HttpGet("anys-academics")]
+    [Authorize(Policy = "QualsevolRol")]
     public async Task<ActionResult<ApiResponse<IEnumerable<AnyAcademicDto>>>> GetAnysAcademics(CancellationToken ct)
     {
         var anys = await _calendariRepo.GetAnysAcademicsAsync(ct);

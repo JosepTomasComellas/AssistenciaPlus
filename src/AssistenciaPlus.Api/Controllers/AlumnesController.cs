@@ -40,9 +40,8 @@ public class AlumnesController : BaseApiController
         if (rol == nameof(RolUsuari.Mestre))
         {
             var mestreId = GetCurrentUserId();
-            var grup = await _grupRepo.GetByIdAsync(grupId, ct);
-            if (grup?.TutorId != mestreId)
-                return Forbid();
+            var esAutoritzat = await _grupRepo.EsMestreAutoritzatAsync(grupId, mestreId, ct);
+            if (!esAutoritzat) return Forbid();
         }
 
         var alumnes = await _alumneRepo.GetPerGrupAsync(grupId, ct);
