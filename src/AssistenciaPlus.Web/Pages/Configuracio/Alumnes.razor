@@ -45,10 +45,24 @@
                     Color="@(_grupSeleccionat == g.Id ? Color.Primary : Color.Default)"
                     Variant="@(_grupSeleccionat == g.Id ? Variant.Filled : Variant.Outlined)"
                     Icon="@Icons.Material.Filled.Group">
-                    @g.NomComplet
-                    <MudText Typo="Typo.caption" Class="ml-1" Style="opacity:0.75">
-                        (@g.NombreAlumnes al.)
-                    </MudText>
+                    <div>
+                        <span>@g.NomComplet</span>
+                        <MudText Typo="Typo.caption" Class="ml-1" Style="opacity:0.75">
+                            (@g.NombreAlumnes al.)
+                        </MudText>
+                        @if (!string.IsNullOrEmpty(g.TutorNomComplet))
+                        {
+                            <MudText Typo="Typo.caption" Style="display:block;opacity:0.8">
+                                @g.TutorNomComplet
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Style="display:block;color:#E57373">
+                                Sense tutor assignat
+                            </MudText>
+                        }
+                    </div>
                 </MudChip>
             }
         </MudChipSet>
@@ -71,12 +85,18 @@
                 OnClick="ObrirCrearAlumne">
                 Afegir alumne
             </MudButton>
+            <MudTooltip Text="Editar grup (canviar tutor)">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                    Color="Color.Default" Size="Size.Small"
+                    OnClick="() => ObrirEditarGrup(grupActual!)" />
+            </MudTooltip>
             @if (grupActual?.NombreAlumnes == 0)
             {
-                <MudIconButton Icon="@Icons.Material.Filled.DeleteForever"
-                    Color="Color.Error" Size="Size.Small"
-                    OnClick="() => EsborrarGrupAsync(grupActual!.Id)"
-                    title="Esborrar grup buit" />
+                <MudTooltip Text="Esborrar grup buit">
+                    <MudIconButton Icon="@Icons.Material.Filled.DeleteForever"
+                        Color="Color.Error" Size="Size.Small"
+                        OnClick="() => EsborrarGrupAsync(grupActual!.Id)" />
+                </MudTooltip>
             }
         </div>
     </MudPaper>
@@ -167,30 +187,43 @@
     </YesButton>
 </MudMessageBox>
 
-<!-- Dialog crear grup -->
+<!-- Dialog crear/editar grup -->
 <MudDialog @bind-Visible="_dialogGrupObert" Options="@_dialogOptions">
     <TitleContent>
-        <MudText Typo="Typo.h6">Nou grup</MudText>
+        <MudText Typo="Typo.h6">@(_editantGrup == null ? "Nou grup" : "Editar grup")</MudText>
     </TitleContent>
     <DialogContent>
         <MudStack Spacing="3">
-            <MudSelect T="Guid" @bind-Value="_formGrupCursId" Label="Curs"
-                Variant="Variant.Outlined" Required="true">
-                @foreach (var cicle in _cicles)
-                {
-                    <MudSelectItem Value="@Guid.Empty" Disabled="true">
-                        ── @cicle.Nom ──
-                    </MudSelectItem>
-                    @foreach (var curs in cicle.Cursos)
+            @if (_editantGrup == null)
+            {
+                <MudSelect T="Guid" @bind-Value="_formGrupCursId" Label="Curs"
+                    Variant="Variant.Outlined" Required="true">
+                    @foreach (var cicle in _cicles)
                     {
-                        <MudSelectItem Value="@curs.Id">@curs.Nom</MudSelectItem>
+                        <MudSelectItem Value="@Guid.Empty" Disabled="true">
+                            ── @cicle.Nom ──
+                        </MudSelectItem>
+                        @foreach (var curs in cicle.Cursos)
+                        {
+                            <MudSelectItem Value="@curs.Id">@curs.Nom</MudSelectItem>
+                        }
                     }
-                }
-            </MudSelect>
+                </MudSelect>
+            }
             <MudTextField @bind-Value="_formGrupLletra"
                 Label="Lletra del grup (A, B... o buit per a infantil)"
                 Variant="Variant.Outlined"
-                HelperText="Deixa buit si el curs té un sol grup" />
+                HelperText="Deixa buit si el curs té un sol grup"
+                ReadOnly="_editantGrup != null" />
+            <MudSelect T="Guid?" @bind-Value="_formGrupTutorId"
+                Label="Tutor/a assignat/da" Variant="Variant.Outlined"
+                Clearable="true" HelperText="Selecciona el/la mestre/a responsable del grup">
+                <MudSelectItem T="Guid?" Value="@((Guid?)null)">— Sense tutor —</MudSelectItem>
+                @foreach (var u in _mestres)
+                {
+                    <MudSelectItem T="Guid?" Value="@((Guid?)u.Id)">@u.NomComplet</MudSelectItem>
+                }
+            </MudSelect>
         </MudStack>
     </DialogContent>
     <DialogActions>
@@ -198,7 +231,7 @@
         <MudButton OnClick="DesarGrupAsync"
             Variant="Variant.Filled" Color="Color.Primary"
             Disabled="_desant">
-            Crear grup
+            @(_editantGrup == null ? "Crear grup" : "Desar canvis")
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -306,12 +339,14 @@
     private List<GrupModel> _grups = [];
     private List<CicleModel> _cicles = [];
     private List<AlumneModel> _alumnes = [];
+    private List<UsuariModel> _mestres = [];
     private Guid? _grupSeleccionat;
     private bool _carregantAlumnes;
     private bool _dialogObert;
     private bool _dialogGrupObert;
     private bool _desant;
     private AlumneModel? _editantAlumne;
+    private GrupModel? _editantGrup;
 
     // Confirmació
     private MudMessageBox? _confirmBox;
@@ -321,6 +356,7 @@
     // Formulari grup
     private Guid _formGrupCursId = Guid.Empty;
     private string _formGrupLletra = string.Empty;
+    private Guid? _formGrupTutorId;
 
     // Formulari alumne
     private string _formNom = string.Empty;
@@ -343,41 +379,72 @@
             new("Inici", "/"),
             new("Configuració", null, true),
             new("Alumnes i grups", null, true));
-        _grups = await ConfiguracioService.GetGrupsConfiguracioAsync();
+        var tGrups = ConfiguracioService.GetGrupsConfiguracioAsync();
+        var tUsuaris = ConfiguracioService.GetUsuarisAsync();
+        await Task.WhenAll(tGrups, tUsuaris);
+        _grups = tGrups.Result;
+        _mestres = tUsuaris.Result
+            .Where(u => u.Rol == "Mestre" && u.EsActiu)
+            .OrderBy(u => u.NomComplet).ToList();
         _cicles = await GrupService.GetCiclesAsync();
     }
 
     private void ObrirCrearGrup()
     {
+        _editantGrup = null;
         _formGrupCursId = Guid.Empty;
         _formGrupLletra = string.Empty;
+        _formGrupTutorId = null;
+        _dialogGrupObert = true;
+    }
+
+    private void ObrirEditarGrup(GrupModel grup)
+    {
+        _editantGrup = grup;
+        _formGrupLletra = grup.Lletra;
+        _formGrupTutorId = grup.TutorId;
         _dialogGrupObert = true;
     }
 
     private async Task DesarGrupAsync()
     {
-        if (_formGrupCursId == Guid.Empty)
-        {
-            Snackbar.Add("Selecciona un curs", Severity.Warning);
-            return;
-        }
-
         _desant = true;
-        var (ok, error) = await ConfiguracioService.CrearGrupAsync(new CrearGrupModel
+        bool ok;
+        string? error;
+
+        if (_editantGrup == null)
         {
-            CursId = _formGrupCursId,
-            Lletra = _formGrupLletra.Trim()
-        });
+            if (_formGrupCursId == Guid.Empty)
+            {
+                Snackbar.Add("Selecciona un curs", Severity.Warning);
+                _desant = false;
+                return;
+            }
+            (ok, error) = await ConfiguracioService.CrearGrupAsync(new CrearGrupModel
+            {
+                CursId = _formGrupCursId,
+                Lletra = _formGrupLletra.Trim(),
+                TutorId = _formGrupTutorId
+            });
+        }
+        else
+        {
+            (ok, error) = await ConfiguracioService.ActualitzarGrupAsync(_editantGrup.Id, new ActualitzarGrupModel
+            {
+                Lletra = _formGrupLletra.Trim(),
+                TutorId = _formGrupTutorId
+            });
+        }
 
         if (ok)
         {
-            Snackbar.Add("Grup creat correctament", Severity.Success);
+            Snackbar.Add(_editantGrup == null ? "Grup creat correctament" : "Grup actualitzat correctament", Severity.Success);
             _dialogGrupObert = false;
             _grups = await ConfiguracioService.GetGrupsConfiguracioAsync();
         }
         else
         {
-            Snackbar.Add(error ?? "Error al crear el grup", Severity.Error);
+            Snackbar.Add(error ?? "Error al desar el grup", Severity.Error);
         }
         _desant = false;
     }
