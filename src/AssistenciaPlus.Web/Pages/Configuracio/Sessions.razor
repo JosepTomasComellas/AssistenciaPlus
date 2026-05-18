@@ -1,6 +1,7 @@
 @page "/configuracio/sessions"
 @attribute [Authorize(Roles = "EquipDirectiu")]
 @inject ConfiguracioService ConfiguracioService
+@inject GrupService GrupService
 @inject ISnackbar Snackbar
 @inject BreadcrumbService BreadcrumbService
 
@@ -24,6 +25,8 @@ else if (_anys.Count == 0)
 else
 {
     <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-radius:12px">
+
+        <!-- Fila 1: Any acadèmic + resum -->
         <div class="d-flex align-center gap-4 flex-wrap mb-3">
             <MudSelect T="Guid" Value="_anySeleccionat"
                 Label="Any acadèmic" Variant="Variant.Outlined"
@@ -36,19 +39,77 @@ else
                     </MudSelectItem>
                 }
             </MudSelect>
-            <MudText Typo="Typo.caption" Style="color:#718096">
-                @_total sessions totals
-            </MudText>
             <MudSpacer />
             <MudText Typo="Typo.caption" Style="color:#718096">
-                Pàgina @_pagina de @PaginesTotal
+                @_total sessions · Pàgina @_pagina de @PaginesTotal
             </MudText>
+        </div>
+
+        <!-- Fila 2: Filtres -->
+        <div class="d-flex align-center gap-3 flex-wrap mb-3">
+            <!-- Grup -->
+            <MudSelect T="Guid?" Value="_filtreGrupId"
+                Label="Grup" Variant="Variant.Outlined"
+                Style="min-width:160px;max-width:200px" Dense="true" Clearable="true"
+                ValueChanged="FiltreGrupCanviatAsync">
+                <MudSelectItem T="Guid?" Value="@((Guid?)null)">Tots els grups</MudSelectItem>
+                @foreach (var g in _grups)
+                {
+                    <MudSelectItem T="Guid?" Value="@((Guid?)g.Id)">@g.NomComplet</MudSelectItem>
+                }
+            </MudSelect>
+
+            <!-- Mestre/a -->
+            <MudSelect T="Guid?" Value="_filtreMestreId"
+                Label="Mestre/a" Variant="Variant.Outlined"
+                Style="min-width:160px;max-width:220px" Dense="true" Clearable="true"
+                ValueChanged="FiltreMestreCanviatAsync">
+                <MudSelectItem T="Guid?" Value="@((Guid?)null)">Tots els mestres</MudSelectItem>
+                @foreach (var u in _usuaris)
+                {
+                    <MudSelectItem T="Guid?" Value="@((Guid?)u.Id)">@u.NomComplet</MudSelectItem>
+                }
+            </MudSelect>
+
+            <!-- Franja horària -->
+            <MudSelect T="Guid?" Value="_filtreFranjaId"
+                Label="Franja" Variant="Variant.Outlined"
+                Style="min-width:140px;max-width:180px" Dense="true" Clearable="true"
+                ValueChanged="FiltreFranjaCanviatAsync">
+                <MudSelectItem T="Guid?" Value="@((Guid?)null)">Totes les franges</MudSelectItem>
+                @foreach (var f in _franjes)
+                {
+                    <MudSelectItem T="Guid?" Value="@((Guid?)f.Id)">@f.Nom</MudSelectItem>
+                }
+            </MudSelect>
+
+            <!-- Rang de dates -->
+            <MudDatePicker Date="_filtreDataInici"
+                Label="Des de" Variant="Variant.Outlined"
+                DateFormat="dd/MM/yyyy" Dense="true"
+                Style="max-width:160px" Clearable="true"
+                DateChanged="FiltreDataIniciCanviada" />
+            <MudDatePicker Date="_filtreDataFi"
+                Label="Fins a" Variant="Variant.Outlined"
+                DateFormat="dd/MM/yyyy" Dense="true"
+                Style="max-width:160px" Clearable="true"
+                DateChanged="FiltreDataFiCanviada" />
+
+            <!-- Botó netejar filtres -->
+            @if (TeFiltresActius)
+            {
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small"
+                    StartIcon="@Icons.Material.Filled.FilterAltOff"
+                    OnClick="NetejarFiltresAsync">
+                    Netejar filtres
+                </MudButton>
+            }
         </div>
 
         @if (_sessions.Count == 0)
         {
             <MudAlert Severity="Severity.Info" Dense="true">
-                No hi ha sessions registrades per a aquest any acadèmic.
+                No hi ha sessions que coincideixin amb els filtres seleccionats.
             </MudAlert>
         }
         else
@@ -138,7 +199,17 @@ else
 
 @code {
     private List<AnyAcademicModel> _anys = [];
+    private List<GrupModel> _grups = [];
+    private List<UsuariModel> _usuaris = [];
+    private List<FranjaHorariaModel> _franjes = [];
+
     private Guid _anySeleccionat;
+    private Guid? _filtreGrupId;
+    private Guid? _filtreMestreId;
+    private Guid? _filtreFranjaId;
+    private DateTime? _filtreDataInici;
+    private DateTime? _filtreDataFi;
+
     private List<SessioTraçabilitatModel> _sessions = [];
     private int _total;
     private int _pagina = 1;
@@ -146,6 +217,8 @@ else
     private bool _carregant = true;
 
     private int PaginesTotal => (int)Math.Ceiling((double)_total / MidaPagina);
+    private bool TeFiltresActius => _filtreGrupId.HasValue || _filtreMestreId.HasValue
+        || _filtreFranjaId.HasValue || _filtreDataInici.HasValue || _filtreDataFi.HasValue;
 
     protected override async Task OnInitializedAsync()
     {
@@ -154,7 +227,17 @@ else
             new("Configuració", null, true),
             new("Traçabilitat", null, true));
 
-        _anys = await ConfiguracioService.GetAnysAcademicsAsync();
+        var tAnys = ConfiguracioService.GetAnysAcademicsAsync();
+        var tGrups = ConfiguracioService.GetGrupsConfiguracioAsync();
+        var tUsuaris = ConfiguracioService.GetUsuarisAsync();
+        var tFranjes = GrupService.GetFranjesAsync();
+        await Task.WhenAll(tAnys, tGrups, tUsuaris, tFranjes);
+
+        _anys = tAnys.Result;
+        _grups = tGrups.Result.OrderBy(g => g.NomComplet).ToList();
+        _usuaris = tUsuaris.Result.Where(u => u.EsActiu).OrderBy(u => u.NomComplet).ToList();
+        _franjes = tFranjes.Result.OrderBy(f => f.Ordre).ToList();
+
         var actiu = _anys.FirstOrDefault(a => a.EsActiu) ?? _anys.FirstOrDefault();
         if (actiu != null)
         {
@@ -171,6 +254,52 @@ else
         await CarregarSessionsAsync();
     }
 
+    private async Task FiltreGrupCanviatAsync(Guid? id)
+    {
+        _filtreGrupId = id;
+        _pagina = 1;
+        await CarregarSessionsAsync();
+    }
+
+    private async Task FiltreMestreCanviatAsync(Guid? id)
+    {
+        _filtreMestreId = id;
+        _pagina = 1;
+        await CarregarSessionsAsync();
+    }
+
+    private async Task FiltreFranjaCanviatAsync(Guid? id)
+    {
+        _filtreFranjaId = id;
+        _pagina = 1;
+        await CarregarSessionsAsync();
+    }
+
+    private async Task FiltreDataIniciCanviada(DateTime? data)
+    {
+        _filtreDataInici = data;
+        _pagina = 1;
+        await CarregarSessionsAsync();
+    }
+
+    private async Task FiltreDataFiCanviada(DateTime? data)
+    {
+        _filtreDataFi = data;
+        _pagina = 1;
+        await CarregarSessionsAsync();
+    }
+
+    private async Task NetejarFiltresAsync()
+    {
+        _filtreGrupId = null;
+        _filtreMestreId = null;
+        _filtreFranjaId = null;
+        _filtreDataInici = null;
+        _filtreDataFi = null;
+        _pagina = 1;
+        await CarregarSessionsAsync();
+    }
+
     private async Task PaginaCanviadaAsync(int pagina)
     {
         _pagina = pagina;
@@ -180,7 +309,13 @@ else
     private async Task CarregarSessionsAsync()
     {
         if (_anySeleccionat == Guid.Empty) return;
-        var data = await ConfiguracioService.GetSessionsAsync(_anySeleccionat, _pagina, MidaPagina);
+        var dataInici = _filtreDataInici.HasValue
+            ? DateOnly.FromDateTime(_filtreDataInici.Value) : (DateOnly?)null;
+        var dataFi = _filtreDataFi.HasValue
+            ? DateOnly.FromDateTime(_filtreDataFi.Value) : (DateOnly?)null;
+        var data = await ConfiguracioService.GetSessionsAsync(
+            _anySeleccionat, _pagina, MidaPagina,
+            _filtreGrupId, _filtreMestreId, dataInici, dataFi, _filtreFranjaId);
         _sessions = data.Sessions;
         _total = data.Total;
         StateHasChanged();

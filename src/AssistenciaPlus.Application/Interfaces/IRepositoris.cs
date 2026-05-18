@@ -52,8 +52,18 @@ public interface IAssistenciaRepository
     Task<IReadOnlyList<AssistenciaAlumne>> GetAssistenciesAlumneAsync(Guid alumneId, DateOnly dataInici, DateOnly dataFi, CancellationToken ct = default);
     Task<IReadOnlyList<AssistenciaAlumne>> GetAssistenciesGrupMesAsync(Guid grupId, int any, int mes, CancellationToken ct = default);
     Task<IReadOnlyList<AssistenciaAlumne>> GetAssistenciesGrupRangAsync(Guid grupId, DateOnly dataInici, DateOnly dataFi, CancellationToken ct = default);
-    Task<IReadOnlyList<RegistreAssistencia>> GetSessionsAsync(Guid anyAcademicId, int pagina, int midaPagina, CancellationToken ct = default);
-    Task<int> GetSessionsCountAsync(Guid anyAcademicId, CancellationToken ct = default);
+    Task<IReadOnlyList<RegistreAssistencia>> GetSessionsAsync(
+        Guid anyAcademicId, int pagina, int midaPagina,
+        Guid? grupId = null, Guid? mestreId = null,
+        DateOnly? dataInici = null, DateOnly? dataFi = null,
+        Guid? franjaId = null,
+        CancellationToken ct = default);
+    Task<int> GetSessionsCountAsync(
+        Guid anyAcademicId,
+        Guid? grupId = null, Guid? mestreId = null,
+        DateOnly? dataInici = null, DateOnly? dataFi = null,
+        Guid? franjaId = null,
+        CancellationToken ct = default);
     Task<RegistreAssistencia> AfegirRegistreAsync(RegistreAssistencia registre, CancellationToken ct = default);
     Task ActualitzarRegistreAsync(RegistreAssistencia registre, CancellationToken ct = default);
     Task<int> SaveChangesAsync(CancellationToken ct = default);

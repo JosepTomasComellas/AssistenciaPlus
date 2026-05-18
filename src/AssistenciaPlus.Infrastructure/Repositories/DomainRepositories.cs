@@ -292,21 +292,40 @@ public class AssistenciaRepository : IAssistenciaRepository
             .ToListAsync(ct);
 
     public async Task<IReadOnlyList<RegistreAssistencia>> GetSessionsAsync(
-        Guid anyAcademicId, int pagina, int midaPagina, CancellationToken ct = default)
+        Guid anyAcademicId, int pagina, int midaPagina,
+        Guid? grupId = null, Guid? mestreId = null,
+        DateOnly? dataInici = null, DateOnly? dataFi = null,
+        Guid? franjaId = null,
+        CancellationToken ct = default)
         => await _ctx.RegistresAssistencia
             .Include(r => r.Grup).ThenInclude(g => g.Curs)
             .Include(r => r.FranjaHoraria)
             .Include(r => r.Mestre)
             .Include(r => r.Assistencies)
-            .Where(r => r.Grup.AnyAcademicId == anyAcademicId)
+            .Where(r => r.Grup.AnyAcademicId == anyAcademicId
+                && (grupId == null || r.GrupId == grupId)
+                && (mestreId == null || r.MestreId == mestreId)
+                && (dataInici == null || r.Data >= dataInici)
+                && (dataFi == null || r.Data <= dataFi)
+                && (franjaId == null || r.FranjaHorariaId == franjaId))
             .OrderByDescending(r => r.Data).ThenByDescending(r => r.DegatAt)
             .Skip((pagina - 1) * midaPagina)
             .Take(midaPagina)
             .ToListAsync(ct);
 
-    public Task<int> GetSessionsCountAsync(Guid anyAcademicId, CancellationToken ct = default)
+    public Task<int> GetSessionsCountAsync(
+        Guid anyAcademicId,
+        Guid? grupId = null, Guid? mestreId = null,
+        DateOnly? dataInici = null, DateOnly? dataFi = null,
+        Guid? franjaId = null,
+        CancellationToken ct = default)
         => _ctx.RegistresAssistencia
-            .Where(r => r.Grup.AnyAcademicId == anyAcademicId)
+            .Where(r => r.Grup.AnyAcademicId == anyAcademicId
+                && (grupId == null || r.GrupId == grupId)
+                && (mestreId == null || r.MestreId == mestreId)
+                && (dataInici == null || r.Data >= dataInici)
+                && (dataFi == null || r.Data <= dataFi)
+                && (franjaId == null || r.FranjaHorariaId == franjaId))
             .CountAsync(ct);
 
     public async Task<RegistreAssistencia> AfegirRegistreAsync(

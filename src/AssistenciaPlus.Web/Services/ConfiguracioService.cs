@@ -246,10 +246,19 @@ public class ConfiguracioService
 
     // ── Sessions (traçabilitat) ──────────────────────────────
 
-    public async Task<SessionsPagedModel> GetSessionsAsync(Guid anyAcademicId, int pagina = 1, int midaPagina = 50)
+    public async Task<SessionsPagedModel> GetSessionsAsync(
+        Guid anyAcademicId, int pagina = 1, int midaPagina = 50,
+        Guid? grupId = null, Guid? mestreId = null,
+        DateOnly? dataInici = null, DateOnly? dataFi = null,
+        Guid? franjaId = null)
     {
-        var result = await _http.GetFromJsonAsync<ApiResponse<SessionsPagedModel>>(
-            $"assistencia/sessions?anyAcademicId={anyAcademicId}&pagina={pagina}&midaPagina={midaPagina}", _opts);
+        var url = $"assistencia/sessions?anyAcademicId={anyAcademicId}&pagina={pagina}&midaPagina={midaPagina}";
+        if (grupId.HasValue) url += $"&grupId={grupId}";
+        if (mestreId.HasValue) url += $"&mestreId={mestreId}";
+        if (dataInici.HasValue) url += $"&dataInici={dataInici:yyyy-MM-dd}";
+        if (dataFi.HasValue) url += $"&dataFi={dataFi:yyyy-MM-dd}";
+        if (franjaId.HasValue) url += $"&franjaId={franjaId}";
+        var result = await _http.GetFromJsonAsync<ApiResponse<SessionsPagedModel>>(url, _opts);
         return result?.Data ?? new SessionsPagedModel();
     }
 

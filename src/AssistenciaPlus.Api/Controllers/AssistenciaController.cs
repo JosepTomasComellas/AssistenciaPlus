@@ -194,13 +194,21 @@ public class AssistenciaController : BaseApiController
         [FromQuery] Guid anyAcademicId,
         [FromQuery] int pagina = 1,
         [FromQuery] int midaPagina = 50,
+        [FromQuery] Guid? grupId = null,
+        [FromQuery] Guid? mestreId = null,
+        [FromQuery] DateOnly? dataInici = null,
+        [FromQuery] DateOnly? dataFi = null,
+        [FromQuery] Guid? franjaId = null,
         CancellationToken ct = default)
     {
         midaPagina = Math.Clamp(midaPagina, 1, 200);
         pagina = Math.Max(1, pagina);
 
-        var sessions = await _assistenciaRepo.GetSessionsAsync(anyAcademicId, pagina, midaPagina, ct);
-        var total = await _assistenciaRepo.GetSessionsCountAsync(anyAcademicId, ct);
+        var sessions = await _assistenciaRepo.GetSessionsAsync(
+            anyAcademicId, pagina, midaPagina,
+            grupId, mestreId, dataInici, dataFi, franjaId, ct);
+        var total = await _assistenciaRepo.GetSessionsCountAsync(
+            anyAcademicId, grupId, mestreId, dataInici, dataFi, franjaId, ct);
 
         var dtos = sessions.Select(r => new AssistenciaPlus.Application.DTOs.SessioTraçabilitatDto
         {
