@@ -100,8 +100,9 @@
             </MudDrawer>
 
             <!-- Contingut principal -->
-            <MudMainContent>
-                <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4 pa-sm-6">
+            <MudMainContent Style="display:flex;flex-direction:column;min-height:100%">
+                <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4 pa-sm-6"
+                    Style="flex:1">
                     @if (Breadcrumbs.Items.Count > 1)
                     {
                         <MudBreadcrumbs Items="Breadcrumbs.Items.ToList()"
@@ -110,19 +111,15 @@
                     @Body
                 </MudContainer>
 
-                <!-- Peu de pàgina -->
-                <div class="d-flex align-center justify-center flex-wrap gap-2 pa-3"
-                    Style="border-top:1px solid #E2E8F0;margin-top:24px;background:#FAFBFD">
-                    <MudText Typo="Typo.caption" Style="color:#A0AEC0">
-                        <strong style="color:#4A5568">AssistenciaPlus</strong> v0.5.0
+                <!-- Peu de pàgina (sempre visible a la part inferior) -->
+                <div class="d-flex align-center justify-center flex-wrap gap-2 pa-2"
+                    Style="border-top:1px solid #E2E8F0;background:#FAFBFD;flex-shrink:0">
+                    <MudText Typo="Typo.caption" Style="color:#718096">
+                        <strong>AssistenciaPlus</strong> v0.5.0
                     </MudText>
                     <MudText Typo="Typo.caption" Style="color:#CBD5E0">·</MudText>
-                    <MudText Typo="Typo.caption" Style="color:#A0AEC0">
-                        Escola Marta Mata · Viladecans
-                    </MudText>
-                    <MudText Typo="Typo.caption" Style="color:#CBD5E0">·</MudText>
-                    <MudText Typo="Typo.caption" Style="color:#A0AEC0">
-                        © @DateTime.Now.Year
+                    <MudText Typo="Typo.caption" Style="color:#718096">
+                        Escola Marta Mata · Viladecans · © @DateTime.Now.Year
                     </MudText>
                 </div>
             </MudMainContent>

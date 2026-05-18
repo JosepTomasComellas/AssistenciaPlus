@@ -34,6 +34,8 @@ async function onActivate(event) {
             .filter(key => key.startsWith(cacheNamePrefix) && key !== cacheName)
             .map(key => caches.delete(key))
     );
+    // Pren el control de totes les pàgines obertes immediatament (sense esperar recàrrega)
+    await clients.claim();
 }
 
 async function onFetch(event) {
