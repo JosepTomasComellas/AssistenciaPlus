@@ -1,5 +1,6 @@
 using AssistenciaPlus.Application.Interfaces;
 using AssistenciaPlus.Domain.Entities;
+using AssistenciaPlus.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using DomainCtx = AssistenciaPlus.Infrastructure.Data.AppDbContext;
 
@@ -82,7 +83,9 @@ public class GrupRepository : IGrupRepository
             .Include(g => g.AnyAcademic)
             .Include(g => g.Tutor)
             .Include(g => g.Alumnes.Where(a => a.EsActiu))
-            .Where(g => g.TutorId == mestreId && g.AnyAcademicId == anyAcademicId)
+            .Where(g => g.AnyAcademicId == anyAcademicId
+                && (g.TutorId == mestreId
+                    || g.MestresAutoritzats.Any(m => m.UsuariId == mestreId)))
             .OrderBy(g => g.Curs.Cicle.Ordre).ThenBy(g => g.Curs.Ordre).ThenBy(g => g.Lletra)
             .ToListAsync(ct);
 
@@ -138,6 +141,37 @@ public class GrupRepository : IGrupRepository
 
     public Task<int> SaveChangesAsync(CancellationToken ct = default)
         => _ctx.SaveChangesAsync(ct);
+
+    public async Task<IReadOnlyList<Usuari>> GetMestresGrupAsync(Guid grupId, CancellationToken ct = default)
+        => await _ctx.GrupsMestres
+            .Where(gm => gm.GrupId == grupId)
+            .Include(gm => gm.Usuari)
+            .Select(gm => gm.Usuari)
+            .OrderBy(u => u.Cognom1).ThenBy(u => u.Nom)
+            .ToListAsync(ct);
+
+    public Task<bool> EsMestreAutoritzatAsync(Guid grupId, Guid mestreId, CancellationToken ct = default)
+        => _ctx.GrupsMestres.AnyAsync(gm => gm.GrupId == grupId && gm.UsuariId == mestreId, ct);
+
+    public async Task AfegirMestreGrupAsync(Guid grupId, Guid mestreId, CancellationToken ct = default)
+    {
+        var existent = await _ctx.GrupsMestres
+            .AnyAsync(gm => gm.GrupId == grupId && gm.UsuariId == mestreId, ct);
+        if (!existent)
+            await _ctx.GrupsMestres.AddAsync(new GrupMestre
+            {
+                GrupId = grupId,
+                UsuariId = mestreId,
+                AfegitAt = DateTime.UtcNow
+            }, ct);
+    }
+
+    public async Task TreureMestreGrupAsync(Guid grupId, Guid mestreId, CancellationToken ct = default)
+    {
+        var gm = await _ctx.GrupsMestres
+            .FirstOrDefaultAsync(x => x.GrupId == grupId && x.UsuariId == mestreId, ct);
+        if (gm != null) _ctx.GrupsMestres.Remove(gm);
+    }
 
     public Task<Cicle?> GetCiclePerIdAsync(Guid id, CancellationToken ct = default)
         => _ctx.Cicles.Include(c => c.Cursos).FirstOrDefaultAsync(c => c.Id == id, ct);
@@ -256,6 +290,24 @@ public class AssistenciaRepository : IAssistenciaRepository
                 && a.RegistreAssistencia.Data >= dataInici
                 && a.RegistreAssistencia.Data <= dataFi)
             .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<RegistreAssistencia>> GetSessionsAsync(
+        Guid anyAcademicId, int pagina, int midaPagina, CancellationToken ct = default)
+        => await _ctx.RegistresAssistencia
+            .Include(r => r.Grup).ThenInclude(g => g.Curs)
+            .Include(r => r.FranjaHoraria)
+            .Include(r => r.Mestre)
+            .Include(r => r.Assistencies)
+            .Where(r => r.Grup.AnyAcademicId == anyAcademicId)
+            .OrderByDescending(r => r.Data).ThenByDescending(r => r.DegatAt)
+            .Skip((pagina - 1) * midaPagina)
+            .Take(midaPagina)
+            .ToListAsync(ct);
+
+    public Task<int> GetSessionsCountAsync(Guid anyAcademicId, CancellationToken ct = default)
+        => _ctx.RegistresAssistencia
+            .Where(r => r.Grup.AnyAcademicId == anyAcademicId)
+            .CountAsync(ct);
 
     public async Task<RegistreAssistencia> AfegirRegistreAsync(
         RegistreAssistencia registre, CancellationToken ct = default)

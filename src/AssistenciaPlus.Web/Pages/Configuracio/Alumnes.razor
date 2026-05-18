@@ -85,6 +85,20 @@
                 OnClick="ObrirCrearAlumne">
                 Afegir alumne
             </MudButton>
+            <MudTooltip Text="Importar alumnes des d'Excel (Esfera/Alexia)">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                    StartIcon="@Icons.Material.Filled.TableChart"
+                    OnClick="ObrirImportarExcel">
+                    Importar Excel
+                </MudButton>
+            </MudTooltip>
+            <MudTooltip Text="Gestionar mestres autoritzats a passar llista en aquest grup">
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                    StartIcon="@Icons.Material.Filled.SupervisorAccount"
+                    OnClick="() => ObrirMestresGrup(grupActual!)">
+                    Mestres
+                </MudButton>
+            </MudTooltip>
             <MudTooltip Text="Editar grup (canviar tutor)">
                 <MudIconButton Icon="@Icons.Material.Filled.Edit"
                     Color="Color.Default" Size="Size.Small"
@@ -186,6 +200,117 @@
         </MudButton>
     </YesButton>
 </MudMessageBox>
+
+<!-- Dialog: Mestres autoritzats -->
+<MudDialog @bind-Visible="_dialogMestresObert" Options="@_dialogOptionsSmall">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            Mestres autoritzats — @_grupMestresActual?.NomComplet
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.caption" Style="color:#718096">
+                A més del tutor/a principal, pots autoritzar altres mestres a passar llista en aquest grup.
+            </MudText>
+
+            @if (_mestresGrup.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    Cap mestre addicional autoritzat.
+                </MudAlert>
+            }
+            else
+            {
+                @foreach (var m in _mestresGrup)
+                {
+                    <div class="d-flex align-center justify-space-between">
+                        <MudText>@m.NomComplet</MudText>
+                        <MudIconButton Icon="@Icons.Material.Filled.RemoveCircle"
+                            Color="Color.Error" Size="Size.Small"
+                            OnClick="() => TreureMestreGrupAsync(m.Id)" />
+                    </div>
+                }
+            }
+
+            <MudDivider />
+            <MudText Typo="Typo.subtitle2" Style="font-weight:600">Afegir mestre</MudText>
+            <MudSelect T="Guid" @bind-Value="_mestreAfegirId"
+                Label="Mestre a autoritzar" Variant="Variant.Outlined" Dense="true">
+                @foreach (var u in _mestresDisponibles)
+                {
+                    <MudSelectItem T="Guid" Value="@u.Id">@u.NomComplet</MudSelectItem>
+                }
+            </MudSelect>
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary"
+                StartIcon="@Icons.Material.Filled.AddCircle"
+                OnClick="AfegirMestreGrupAsync"
+                Disabled="_desant || _mestreAfegirId == Guid.Empty">
+                Autoritzar mestre
+            </MudButton>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _dialogMestresObert = false" Variant="Variant.Text">Tancar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Dialog: Importar alumnes Excel -->
+<MudDialog @bind-Visible="_dialogExcelObert" Options="@_dialogOptionsSmall">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            Importar alumnes des d'Excel — @(_grupSeleccionat.HasValue ? _grups.FirstOrDefault(g => g.Id == _grupSeleccionat)?.NomComplet : "")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="Severity.Info" Dense="true">
+                El fitxer ha de ser .xlsx amb columnes: <strong>Cognom1</strong>, <strong>Nom</strong> (obligatòries)
+                i opcionalment <strong>Cognom2</strong> i <strong>DataNaixement</strong>.
+                Compatible amb exportació Esfera/Alexia.
+            </MudAlert>
+            <InputFile id="inputExcelAlumnes" OnChange="ImportarExcelAsync"
+                accept=".xlsx,.xls"
+                style="display:none" />
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                StartIcon="@Icons.Material.Filled.TableChart"
+                HtmlTag="label" for="inputExcelAlumnes"
+                Disabled="_importantExcel">
+                @if (_importantExcel)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                    <span>Important...</span>
+                }
+                else
+                {
+                    <span>Seleccionar fitxer Excel</span>
+                }
+            </MudButton>
+            @if (_resultatImportacio != null)
+            {
+                <MudAlert Severity="Severity.Success" Dense="true">
+                    Importats @_resultatImportacio.Importats alumnes correctament.
+                    @if (_resultatImportacio.Ignorats > 0)
+                    {
+                        <span> (@_resultatImportacio.Ignorats ignorats)</span>
+                    }
+                </MudAlert>
+                @if (_resultatImportacio.Errors.Count > 0)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">
+                        @foreach (var e in _resultatImportacio.Errors.Take(5))
+                        {
+                            <MudText Typo="Typo.caption">@e</MudText>
+                        }
+                    </MudAlert>
+                }
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="TancarDialogExcel" Variant="Variant.Text">Tancar</MudButton>
+    </DialogActions>
+</MudDialog>
 
 <!-- Dialog crear/editar grup -->
 <MudDialog @bind-Visible="_dialogGrupObert" Options="@_dialogOptions">
@@ -366,9 +491,27 @@
     private int _formOrdreFusteta;
     private bool _formEsActiu = true;
 
+    // Mestres autoritzats
+    private bool _dialogMestresObert;
+    private GrupModel? _grupMestresActual;
+    private List<UsuariModel> _mestresGrup = [];
+    private Guid _mestreAfegirId;
+
+    // Importació Excel
+    private bool _dialogExcelObert;
+    private bool _importantExcel;
+    private ImportarAlumnesResultModel? _resultatImportacio;
+
     private readonly DialogOptions _dialogOptions = new()
     {
         MaxWidth = MaxWidth.Medium,
+        FullWidth = true,
+        CloseButton = true
+    };
+
+    private readonly DialogOptions _dialogOptionsSmall = new()
+    {
+        MaxWidth = MaxWidth.Small,
         FullWidth = true,
         CloseButton = true
     };
@@ -601,5 +744,99 @@
         }
 
         _desant = false;
+    }
+
+    // ── Mestres autoritzats ──────────────────────────────────
+
+    private IEnumerable<UsuariModel> _mestresDisponibles =>
+        _mestres.Where(m => m.Id != (_grupMestresActual?.TutorId ?? Guid.Empty)
+                         && !_mestresGrup.Any(mg => mg.Id == m.Id));
+
+    private async Task ObrirMestresGrup(GrupModel grup)
+    {
+        _grupMestresActual = grup;
+        _mestreAfegirId = Guid.Empty;
+        _mestresGrup = await ConfiguracioService.GetMestresGrupAsync(grup.Id);
+        _dialogMestresObert = true;
+    }
+
+    private async Task AfegirMestreGrupAsync()
+    {
+        if (_grupMestresActual == null || _mestreAfegirId == Guid.Empty) return;
+        _desant = true;
+
+        var (ok, error) = await ConfiguracioService.AfegirMestreGrupAsync(_grupMestresActual.Id, _mestreAfegirId);
+        if (ok)
+        {
+            Snackbar.Add("Mestre autoritzat correctament", Severity.Success);
+            _mestresGrup = await ConfiguracioService.GetMestresGrupAsync(_grupMestresActual.Id);
+            _mestreAfegirId = Guid.Empty;
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error en autoritzar el mestre", Severity.Error);
+        }
+        _desant = false;
+    }
+
+    private async Task TreureMestreGrupAsync(Guid mestreId)
+    {
+        if (_grupMestresActual == null) return;
+        var (ok, error) = await ConfiguracioService.TreureMestreGrupAsync(_grupMestresActual.Id, mestreId);
+        if (ok)
+        {
+            Snackbar.Add("Mestre tret del grup", Severity.Success);
+            _mestresGrup = await ConfiguracioService.GetMestresGrupAsync(_grupMestresActual.Id);
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error en treure el mestre", Severity.Error);
+        }
+    }
+
+    // ── Importació Excel ─────────────────────────────────────
+
+    private void ObrirImportarExcel()
+    {
+        _resultatImportacio = null;
+        _dialogExcelObert = true;
+    }
+
+    private void TancarDialogExcel()
+    {
+        _dialogExcelObert = false;
+        if (_resultatImportacio?.Importats > 0)
+            _ = GrupCanviatAsync(_grupSeleccionat);
+    }
+
+    private async Task ImportarExcelAsync(InputFileChangeEventArgs e)
+    {
+        if (!_grupSeleccionat.HasValue) return;
+        _importantExcel = true;
+        _resultatImportacio = null;
+
+        try
+        {
+            var (ok, resultat, error) = await ConfiguracioService.ImportarAlumnesExcelAsync(
+                _grupSeleccionat.Value, e.File);
+
+            if (ok && resultat != null)
+            {
+                _resultatImportacio = resultat;
+                _grups = await ConfiguracioService.GetGrupsConfiguracioAsync();
+            }
+            else
+            {
+                Snackbar.Add(error ?? "Error en importar el fitxer Excel", Severity.Error);
+            }
+        }
+        catch
+        {
+            Snackbar.Add("No s'ha pogut processar el fitxer Excel", Severity.Error);
+        }
+        finally
+        {
+            _importantExcel = false;
+        }
     }
 }

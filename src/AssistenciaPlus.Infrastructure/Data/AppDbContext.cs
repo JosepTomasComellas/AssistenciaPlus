@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<Cicle> Cicles { get; set; }
     public DbSet<Curs> Cursos { get; set; }
     public DbSet<Grup> Grups { get; set; }
+    public DbSet<GrupMestre> GrupsMestres { get; set; }
     public DbSet<Alumne> Alumnes { get; set; }
     public DbSet<FranjaHoraria> FranjesHoraries { get; set; }
     public DbSet<RegistreAssistencia> RegistresAssistencia { get; set; }
@@ -90,6 +91,20 @@ public class AppDbContext : DbContext
              .HasForeignKey(x => x.TutorId)
              .OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(x => new { x.CursId, x.AnyAcademicId, x.Lletra }).IsUnique();
+        });
+
+        // ── GrupMestre ────────────────────────────────────────
+        modelBuilder.Entity<GrupMestre>(e =>
+        {
+            e.HasKey(x => new { x.GrupId, x.UsuariId });
+            e.HasOne(x => x.Grup)
+             .WithMany(x => x.MestresAutoritzats)
+             .HasForeignKey(x => x.GrupId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Usuari)
+             .WithMany(x => x.GrupsAutoritzats)
+             .HasForeignKey(x => x.UsuariId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         // ── Alumne ─────────────────────────────────────────

@@ -175,6 +175,54 @@ public record GrupModel
     public Guid? TutorId { get; init; }
     public string? TutorNomComplet { get; init; }
     public int NombreAlumnes { get; init; }
+    public List<MestreGrupModel> MestresAutoritzats { get; init; } = [];
+}
+
+public record MestreGrupModel
+{
+    public Guid UsuariId { get; init; }
+    public string NomComplet { get; init; } = string.Empty;
+    public string Email { get; init; } = string.Empty;
+    public DateTime AfegitAt { get; init; }
+}
+
+public record SessioTraçabilitatModel
+{
+    public Guid Id { get; init; }
+    public DateOnly Data { get; init; }
+    public string GrupNom { get; init; } = string.Empty;
+    public string FranjaNom { get; init; } = string.Empty;
+    public string MestreNomComplet { get; init; } = string.Empty;
+    public int NombreAbsents { get; init; }
+    public int NombrePresents { get; init; }
+    public int NombreTard { get; init; }
+    public int NombreTotal { get; init; }
+    public DateTime DegatAt { get; init; }
+}
+
+public record MigrarAnyAcademicModel
+{
+    public Guid NouAnyAcademicId { get; init; }
+    public bool IncloureAlumnes { get; init; } = true;
+}
+
+public record ResultatMigracioModel
+{
+    public int GrupsCopials { get; init; }
+    public int AlumnesCopials { get; init; }
+}
+
+public record ImportarAlumnesResultModel
+{
+    public int Importats { get; init; }
+    public int Ignorats { get; init; }
+    public List<string> Errors { get; init; } = [];
+}
+
+public record SessionsPagedModel
+{
+    public int Total { get; init; }
+    public List<SessioTraçabilitatModel> Sessions { get; init; } = [];
 }
 
 public record FranjaHorariaModel

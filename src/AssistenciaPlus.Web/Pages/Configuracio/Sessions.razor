@@ -1,0 +1,188 @@
+@page "/configuracio/sessions"
+@attribute [Authorize(Roles = "EquipDirectiu")]
+@inject ConfiguracioService ConfiguracioService
+@inject ISnackbar Snackbar
+@inject BreadcrumbService BreadcrumbService
+
+<PageTitle>Traçabilitat — Configuració</PageTitle>
+
+<div class="mb-5">
+    <MudText Typo="Typo.h4" Style="font-weight:700;color:#2E7D32">Traçabilitat d'assistències</MudText>
+    <MudText Typo="Typo.subtitle1" Style="color:#4A5568">
+        Historial de sessions introduïdes: qui ha passat llista, quan i amb quants alumnes absents
+    </MudText>
+</div>
+
+@if (_carregant)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+}
+else if (_anys.Count == 0)
+{
+    <MudAlert Severity="Severity.Warning">No hi ha cap any acadèmic configurat.</MudAlert>
+}
+else
+{
+    <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-radius:12px">
+        <div class="d-flex align-center gap-4 flex-wrap mb-3">
+            <MudSelect T="Guid" Value="_anySeleccionat"
+                Label="Any acadèmic" Variant="Variant.Outlined"
+                Style="max-width:220px" Dense="true"
+                ValueChanged="AnyCanviatAsync">
+                @foreach (var any in _anys)
+                {
+                    <MudSelectItem T="Guid" Value="@any.Id">
+                        @any.Nom @(any.EsActiu ? "✓" : "")
+                    </MudSelectItem>
+                }
+            </MudSelect>
+            <MudText Typo="Typo.caption" Style="color:#718096">
+                @_total sessions totals
+            </MudText>
+            <MudSpacer />
+            <MudText Typo="Typo.caption" Style="color:#718096">
+                Pàgina @_pagina de @PaginesTotal
+            </MudText>
+        </div>
+
+        @if (_sessions.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                No hi ha sessions registrades per a aquest any acadèmic.
+            </MudAlert>
+        }
+        else
+        {
+            <MudTable Items="_sessions" Hover="true" Dense="true" Striped="true">
+                <HeaderContent>
+                    <MudTh>Data</MudTh>
+                    <MudTh>Grup</MudTh>
+                    <MudTh>Franja</MudTh>
+                    <MudTh>Mestre/a</MudTh>
+                    <MudTh Style="text-align:center">Presents</MudTh>
+                    <MudTh Style="text-align:center">Absents</MudTh>
+                    <MudTh Style="text-align:center">Tard</MudTh>
+                    <MudTh Style="text-align:center">Total</MudTh>
+                    <MudTh>Hora entrada</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudText Style="font-weight:500">
+                            @context.Data.ToString("dd/MM/yyyy")
+                        </MudText>
+                    </MudTd>
+                    <MudTd>@context.GrupNom</MudTd>
+                    <MudTd>
+                        <MudText Typo="Typo.caption">@context.FranjaNom</MudText>
+                    </MudTd>
+                    <MudTd>@context.MestreNomComplet</MudTd>
+                    <MudTd Style="text-align:center">
+                        @if (context.NombrePresents > 0)
+                        {
+                            <MudChip T="string" Color="Color.Success" Size="Size.Small">
+                                @context.NombrePresents
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Style="color:#A0AEC0">0</MudText>
+                        }
+                    </MudTd>
+                    <MudTd Style="text-align:center">
+                        @if (context.NombreAbsents > 0)
+                        {
+                            <MudChip T="string" Color="Color.Error" Size="Size.Small">
+                                @context.NombreAbsents
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Style="color:#A0AEC0">0</MudText>
+                        }
+                    </MudTd>
+                    <MudTd Style="text-align:center">
+                        @if (context.NombreTard > 0)
+                        {
+                            <MudChip T="string" Color="Color.Warning" Size="Size.Small">
+                                @context.NombreTard
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Style="color:#A0AEC0">0</MudText>
+                        }
+                    </MudTd>
+                    <MudTd Style="text-align:center">
+                        <MudText Typo="Typo.caption">@context.NombreTotal</MudText>
+                    </MudTd>
+                    <MudTd>
+                        <MudText Typo="Typo.caption" Style="color:#718096">
+                            @context.DegatAt.ToLocalTime().ToString("HH:mm")
+                        </MudText>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+
+            <!-- Paginació -->
+            @if (PaginesTotal > 1)
+            {
+                <div class="d-flex justify-center mt-3">
+                    <MudPagination Count="PaginesTotal" Selected="_pagina"
+                        Color="Color.Primary" BoundaryCount="1" MiddleCount="3"
+                        SelectedChanged="PaginaCanviadaAsync" />
+                </div>
+            }
+        }
+    </MudPaper>
+}
+
+@code {
+    private List<AnyAcademicModel> _anys = [];
+    private Guid _anySeleccionat;
+    private List<SessioTraçabilitatModel> _sessions = [];
+    private int _total;
+    private int _pagina = 1;
+    private const int MidaPagina = 50;
+    private bool _carregant = true;
+
+    private int PaginesTotal => (int)Math.Ceiling((double)_total / MidaPagina);
+
+    protected override async Task OnInitializedAsync()
+    {
+        BreadcrumbService.Set(
+            new("Inici", "/"),
+            new("Configuració", null, true),
+            new("Traçabilitat", null, true));
+
+        _anys = await ConfiguracioService.GetAnysAcademicsAsync();
+        var actiu = _anys.FirstOrDefault(a => a.EsActiu) ?? _anys.FirstOrDefault();
+        if (actiu != null)
+        {
+            _anySeleccionat = actiu.Id;
+            await CarregarSessionsAsync();
+        }
+        _carregant = false;
+    }
+
+    private async Task AnyCanviatAsync(Guid id)
+    {
+        _anySeleccionat = id;
+        _pagina = 1;
+        await CarregarSessionsAsync();
+    }
+
+    private async Task PaginaCanviadaAsync(int pagina)
+    {
+        _pagina = pagina;
+        await CarregarSessionsAsync();
+    }
+
+    private async Task CarregarSessionsAsync()
+    {
+        if (_anySeleccionat == Guid.Empty) return;
+        var data = await ConfiguracioService.GetSessionsAsync(_anySeleccionat, _pagina, MidaPagina);
+        _sessions = data.Sessions;
+        _total = data.Total;
+        StateHasChanged();
+    }
+}

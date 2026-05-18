@@ -220,4 +220,63 @@ public class ConfiguracioService
         var result = await response.Content.ReadFromJsonAsync<ApiResponse<string>>(_opts);
         return (result?.Success == true, result?.Data, result?.Error);
     }
+
+    // ── Mestres autoritzats per grup ─────────────────────────
+
+    public async Task<List<UsuariModel>> GetMestresGrupAsync(Guid grupId)
+    {
+        var result = await _http.GetFromJsonAsync<ApiResponse<List<UsuariModel>>>(
+            $"configuracio/grups/{grupId}/mestres", _opts);
+        return result?.Data ?? [];
+    }
+
+    public async Task<(bool Ok, string? Error)> AfegirMestreGrupAsync(Guid grupId, Guid mestreId)
+    {
+        var response = await _http.PostAsync($"configuracio/grups/{grupId}/mestres/{mestreId}", null);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
+    public async Task<(bool Ok, string? Error)> TreureMestreGrupAsync(Guid grupId, Guid mestreId)
+    {
+        var response = await _http.DeleteAsync($"configuracio/grups/{grupId}/mestres/{mestreId}");
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse>(_opts);
+        return (result?.Success == true, result?.Error);
+    }
+
+    // ── Sessions (traçabilitat) ──────────────────────────────
+
+    public async Task<SessionsPagedModel> GetSessionsAsync(Guid anyAcademicId, int pagina = 1, int midaPagina = 50)
+    {
+        var result = await _http.GetFromJsonAsync<ApiResponse<SessionsPagedModel>>(
+            $"assistencia/sessions?anyAcademicId={anyAcademicId}&pagina={pagina}&midaPagina={midaPagina}", _opts);
+        return result?.Data ?? new SessionsPagedModel();
+    }
+
+    // ── Importació alumnes Excel ─────────────────────────────
+
+    public async Task<(bool Ok, ImportarAlumnesResultModel? Resultat, string? Error)> ImportarAlumnesExcelAsync(
+        Guid grupId, IBrowserFile fitxer)
+    {
+        using var content = new MultipartFormDataContent();
+        var stream = fitxer.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+        var streamContent = new StreamContent(stream);
+        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        content.Add(streamContent, "fitxer", fitxer.Name);
+
+        var response = await _http.PostAsync($"configuracio/grups/{grupId}/importar-alumnes-excel", content);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<ImportarAlumnesResultModel>>(_opts);
+        return (result?.Success == true, result?.Data, result?.Error);
+    }
+
+    // ── Migració d'any acadèmic ──────────────────────────────
+
+    public async Task<(bool Ok, ResultatMigracioModel? Resultat, string? Error)> MigrarAnyAcademicAsync(
+        Guid anyOrigen, MigrarAnyAcademicModel model)
+    {
+        var response = await _http.PostAsJsonAsync($"configuracio/anys-academics/{anyOrigen}/migrar", model);
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<ResultatMigracioModel>>(_opts);
+        return (result?.Success == true, result?.Data, result?.Error);
+    }
 }

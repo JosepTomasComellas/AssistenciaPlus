@@ -114,6 +114,13 @@ public class GrupsController : BaseApiController
         AnyAcademicId = g.AnyAcademicId,
         TutorId = g.TutorId,
         TutorNomComplet = g.Tutor?.NomComplet,
-        NombreAlumnes = g.Alumnes?.Count(a => a.EsActiu) ?? 0
+        NombreAlumnes = g.Alumnes?.Count(a => a.EsActiu) ?? 0,
+        MestresAutoritzats = g.MestresAutoritzats?.Select(m => new MestreGrupDto
+        {
+            UsuariId = m.UsuariId,
+            NomComplet = m.Usuari?.NomComplet ?? string.Empty,
+            Email = m.Usuari?.Email ?? string.Empty,
+            AfegitAt = m.AfegitAt
+        }).ToList() ?? []
     };
 }

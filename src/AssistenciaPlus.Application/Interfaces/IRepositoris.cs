@@ -36,6 +36,12 @@ public interface IGrupRepository
     Task<Curs> AfegirCursAsync(Curs curs, CancellationToken ct = default);
     Task ActualitzarCursAsync(Curs curs, CancellationToken ct = default);
     Task EsborrarCursAsync(Guid id, CancellationToken ct = default);
+
+    // Mestres autoritzats
+    Task<IReadOnlyList<Usuari>> GetMestresGrupAsync(Guid grupId, CancellationToken ct = default);
+    Task<bool> EsMestreAutoritzatAsync(Guid grupId, Guid mestreId, CancellationToken ct = default);
+    Task AfegirMestreGrupAsync(Guid grupId, Guid mestreId, CancellationToken ct = default);
+    Task TreureMestreGrupAsync(Guid grupId, Guid mestreId, CancellationToken ct = default);
 }
 
 public interface IAssistenciaRepository
@@ -46,6 +52,8 @@ public interface IAssistenciaRepository
     Task<IReadOnlyList<AssistenciaAlumne>> GetAssistenciesAlumneAsync(Guid alumneId, DateOnly dataInici, DateOnly dataFi, CancellationToken ct = default);
     Task<IReadOnlyList<AssistenciaAlumne>> GetAssistenciesGrupMesAsync(Guid grupId, int any, int mes, CancellationToken ct = default);
     Task<IReadOnlyList<AssistenciaAlumne>> GetAssistenciesGrupRangAsync(Guid grupId, DateOnly dataInici, DateOnly dataFi, CancellationToken ct = default);
+    Task<IReadOnlyList<RegistreAssistencia>> GetSessionsAsync(Guid anyAcademicId, int pagina, int midaPagina, CancellationToken ct = default);
+    Task<int> GetSessionsCountAsync(Guid anyAcademicId, CancellationToken ct = default);
     Task<RegistreAssistencia> AfegirRegistreAsync(RegistreAssistencia registre, CancellationToken ct = default);
     Task ActualitzarRegistreAsync(RegistreAssistencia registre, CancellationToken ct = default);
     Task<int> SaveChangesAsync(CancellationToken ct = default);

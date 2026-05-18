@@ -28,4 +28,5 @@ public class Grup : BaseEntity
     // Navegació
     public ICollection<Alumne> Alumnes { get; set; } = new List<Alumne>();
     public ICollection<RegistreAssistencia> RegistresAssistencia { get; set; } = new List<RegistreAssistencia>();
+    public ICollection<GrupMestre> MestresAutoritzats { get; set; } = new List<GrupMestre>();
 }

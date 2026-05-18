@@ -5,6 +5,7 @@
 # Secrets i configuració local
 .env
 nginx/certs/
+.claude/settings.local.json
 
 # .NET
 **/bin/

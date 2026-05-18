@@ -35,6 +35,49 @@ public record GrupDto
     public Guid? TutorId { get; init; }
     public string? TutorNomComplet { get; init; }
     public int NombreAlumnes { get; init; }
+    public List<MestreGrupDto> MestresAutoritzats { get; init; } = [];
+}
+
+public record MestreGrupDto
+{
+    public Guid UsuariId { get; init; }
+    public string NomComplet { get; init; } = string.Empty;
+    public string Email { get; init; } = string.Empty;
+    public DateTime AfegitAt { get; init; }
+}
+
+public record SessioTraçabilitatDto
+{
+    public Guid Id { get; init; }
+    public DateOnly Data { get; init; }
+    public string GrupNom { get; init; } = string.Empty;
+    public string FranjaNom { get; init; } = string.Empty;
+    public string MestreNomComplet { get; init; } = string.Empty;
+    public int NombreAbsents { get; init; }
+    public int NombrePresents { get; init; }
+    public int NombreTard { get; init; }
+    public int NombreTotal { get; init; }
+    public DateTime DegatAt { get; init; }
+}
+
+public record ImportarAlumnesResultDto
+{
+    public int Importats { get; init; }
+    public int Ignorats { get; init; }
+    public List<string> Errors { get; init; } = [];
+}
+
+public record MigrarAnyAcademicDto
+{
+    [System.ComponentModel.DataAnnotations.Required]
+    public Guid NouAnyAcademicId { get; init; }
+    public bool IncloureAlumnes { get; init; } = true;
+}
+
+public record ResultatMigracioDto
+{
+    public int GrupsCopials { get; init; }
+    public int AlumnesCopials { get; init; }
 }
 
 public record AlumneDto

@@ -148,6 +148,7 @@ try
     builder.Services.AddScoped<IExcelExportService, ExcelExportService>();
     builder.Services.AddScoped<InformesExcelService>();
     builder.Services.AddScoped<InformesPdfService>();
+    builder.Services.AddScoped<AssistenciaPlus.Infrastructure.Services.ImportacioAlumnesExcelService>();
 
     // ── Ollama IA ─────────────────────────────────────────────
     builder.Services.Configure<OllamaSettings>(builder.Configuration.GetSection("Ollama"));

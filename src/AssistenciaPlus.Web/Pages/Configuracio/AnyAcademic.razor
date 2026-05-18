@@ -47,6 +47,7 @@ else
                     <MudTh>2n Trimestre</MudTh>
                     <MudTh>3r Trimestre</MudTh>
                     <MudTh Style="text-align:center">Estat</MudTh>
+                    <MudTh Style="text-align:center">Accions</MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd>
@@ -85,6 +86,13 @@ else
                                 Activar
                             </MudButton>
                         }
+                    </MudTd>
+                    <MudTd Style="text-align:center">
+                        <MudTooltip Text="Copiar grups/alumnes a un altre any acadèmic">
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                Size="Size.Small" Color="Color.Secondary"
+                                OnClick="() => ObrirMigrarAnyAcademic(context)" />
+                        </MudTooltip>
                     </MudTd>
                 </RowTemplate>
             </MudTable>
@@ -172,6 +180,44 @@ else
         }
     </MudPaper>
 }
+
+<!-- Dialog: Migrar any acadèmic -->
+<MudDialog @bind-Visible="_dialogMigrarObert" Options="@_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            Copiar grups i alumnes — @_migrantAny?.Nom
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="Severity.Info" Dense="true">
+                Copia tots els grups (i opcionalment els alumnes) cap a un altre any acadèmic.
+                No sobreescriu grups que ja existeixin al destí.
+            </MudAlert>
+            <MudSelect T="Guid" @bind-Value="_migrarDestiId"
+                Label="Any acadèmic de destí" Variant="Variant.Outlined" Required="true">
+                @foreach (var any in _anys.Where(a => a.Id != _migrantAny?.Id))
+                {
+                    <MudSelectItem T="Guid" Value="@any.Id">
+                        @any.Nom @(any.EsActiu ? "(actiu)" : "")
+                    </MudSelectItem>
+                }
+            </MudSelect>
+            <MudSwitch @bind-Value="_migrarIncloureAlumnes"
+                Color="Color.Primary"
+                Label="@(_migrarIncloureAlumnes ? "Incloure alumnes en la còpia" : "Copiar només els grups (sense alumnes)")" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _dialogMigrarObert = false" Variant="Variant.Text">Cancel·lar</MudButton>
+        <MudButton OnClick="ExecutarMigracioAsync"
+            Variant="Variant.Filled" Color="Color.Secondary"
+            StartIcon="@Icons.Material.Filled.ContentCopy"
+            Disabled="_desant || _migrarDestiId == Guid.Empty">
+            Copiar ara
+        </MudButton>
+    </DialogActions>
+</MudDialog>
 
 <!-- Confirmació d'esborrat -->
 <MudMessageBox @ref="_confirmBox" Title="Confirmar esborrat" CancelText="Cancel·lar">
@@ -326,6 +372,12 @@ else
     private MudMessageBox? _confirmBox;
     private string _confirmMissatge = string.Empty;
 
+    // Migració
+    private bool _dialogMigrarObert;
+    private AnyAcademicModel? _migrantAny;
+    private Guid _migrarDestiId;
+    private bool _migrarIncloureAlumnes = true;
+
     // Cicle
     private CicleModel? _editantCicle;
     private string _formCicleNom = string.Empty;
@@ -425,6 +477,43 @@ else
         else
         {
             Snackbar.Add(error ?? "Error en crear l'any acadèmic", Severity.Error);
+        }
+
+        _desant = false;
+    }
+
+    private void ObrirMigrarAnyAcademic(AnyAcademicModel any)
+    {
+        _migrantAny = any;
+        _migrarDestiId = _anys.FirstOrDefault(a => a.Id != any.Id)?.Id ?? Guid.Empty;
+        _migrarIncloureAlumnes = true;
+        _dialogMigrarObert = true;
+    }
+
+    private async Task ExecutarMigracioAsync()
+    {
+        if (_migrarDestiId == Guid.Empty || _migrantAny == null) return;
+        _desant = true;
+
+        var (ok, resultat, error) = await ConfiguracioService.MigrarAnyAcademicAsync(
+            _migrantAny.Id,
+            new MigrarAnyAcademicModel
+            {
+                NouAnyAcademicId = _migrarDestiId,
+                IncloureAlumnes = _migrarIncloureAlumnes
+            });
+
+        if (ok && resultat != null)
+        {
+            var msg = _migrarIncloureAlumnes
+                ? $"Migració completada: {resultat.GrupsCopials} grups i {resultat.AlumnesCopials} alumnes copiats."
+                : $"Migració completada: {resultat.GrupsCopials} grups copiats (sense alumnes).";
+            Snackbar.Add(msg, Severity.Success);
+            _dialogMigrarObert = false;
+        }
+        else
+        {
+            Snackbar.Add(error ?? "Error en la migració", Severity.Error);
         }
 
         _desant = false;

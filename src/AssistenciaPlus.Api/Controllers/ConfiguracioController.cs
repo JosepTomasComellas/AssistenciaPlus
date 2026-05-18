@@ -4,6 +4,7 @@ using AssistenciaPlus.Application.DTOs;
 using AssistenciaPlus.Application.Interfaces;
 using AssistenciaPlus.Core.Interfaces;
 using AssistenciaPlus.Domain.Entities;
+using AssistenciaPlus.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
@@ -22,8 +23,10 @@ public class ConfiguracioController : ControllerBase
     private readonly ICalendariRepository _calendariRepo;
     private readonly IGrupRepository _grupRepo;
     private readonly IUsuariRepository _usuariRepo;
+    private readonly IAlumneRepository _alumneRepo;
     private readonly IEmailService _emailService;
     private readonly IOllamaService _ollamaService;
+    private readonly ImportacioAlumnesExcelService _importacioExcel;
     private readonly IConfiguration _config;
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<ConfiguracioController> _logger;
@@ -35,8 +38,10 @@ public class ConfiguracioController : ControllerBase
         ICalendariRepository calendariRepo,
         IGrupRepository grupRepo,
         IUsuariRepository usuariRepo,
+        IAlumneRepository alumneRepo,
         IEmailService emailService,
         IOllamaService ollamaService,
+        ImportacioAlumnesExcelService importacioExcel,
         IConfiguration config,
         IWebHostEnvironment env,
         ILogger<ConfiguracioController> logger)
@@ -44,8 +49,10 @@ public class ConfiguracioController : ControllerBase
         _calendariRepo = calendariRepo;
         _grupRepo = grupRepo;
         _usuariRepo = usuariRepo;
+        _alumneRepo = alumneRepo;
         _emailService = emailService;
         _ollamaService = ollamaService;
+        _importacioExcel = importacioExcel;
         _config = config;
         _env = env;
         _logger = logger;
@@ -694,6 +701,174 @@ public class ConfiguracioController : ControllerBase
         return Ok(ApiResponse.Ok());
     }
 
+    // ── Mestres autoritzats per grup ────────────────────────
+
+    /// <summary>Llista els mestres autoritzats d'un grup (a més del tutor).</summary>
+    [HttpGet("grups/{grupId:guid}/mestres")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<UsuariDto>>>> GetMestresGrup(
+        Guid grupId, CancellationToken ct)
+    {
+        var mestres = await _grupRepo.GetMestresGrupAsync(grupId, ct);
+        return Ok(ApiResponse<IEnumerable<UsuariDto>>.Ok(mestres.Select(MaparUsuari)));
+    }
+
+    /// <summary>Afegeix un mestre autoritzat a un grup.</summary>
+    [HttpPost("grups/{grupId:guid}/mestres/{mestreId:guid}")]
+    public async Task<ActionResult<ApiResponse>> AfegirMestreGrup(
+        Guid grupId, Guid mestreId, CancellationToken ct)
+    {
+        var grup = await _grupRepo.GetByIdAsync(grupId, ct);
+        if (grup == null) return NotFound(ApiResponse.Fail("Grup no trobat"));
+
+        var mestre = await _usuariRepo.GetByIdAsync(mestreId, ct);
+        if (mestre == null) return NotFound(ApiResponse.Fail("Usuari no trobat"));
+
+        if (grup.TutorId == mestreId)
+            return BadRequest(ApiResponse.Fail("Ja és el tutor d'aquest grup"));
+
+        await _grupRepo.AfegirMestreGrupAsync(grupId, mestreId, ct);
+        await _grupRepo.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Mestre {Mestre} afegit al grup {Grup}", mestre.NomComplet, grup.NomComplet);
+        return Ok(ApiResponse.Ok());
+    }
+
+    /// <summary>Treu un mestre autoritzat d'un grup.</summary>
+    [HttpDelete("grups/{grupId:guid}/mestres/{mestreId:guid}")]
+    public async Task<ActionResult<ApiResponse>> TreureMestreGrup(
+        Guid grupId, Guid mestreId, CancellationToken ct)
+    {
+        await _grupRepo.TreureMestreGrupAsync(grupId, mestreId, ct);
+        await _grupRepo.SaveChangesAsync(ct);
+        return Ok(ApiResponse.Ok());
+    }
+
+    // ── Importació d'alumnes Excel ────────────────────────────
+
+    /// <summary>Importa alumnes des d'un fitxer Excel (format Esfera/Alexia) per a un grup.</summary>
+    [HttpPost("grups/{grupId:guid}/importar-alumnes-excel")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<ActionResult<ApiResponse<ImportarAlumnesResultDto>>> ImportarAlumnesExcel(
+        Guid grupId, IFormFile fitxer, CancellationToken ct)
+    {
+        var grup = await _grupRepo.GetByIdAsync(grupId, ct);
+        if (grup == null) return NotFound(ApiResponse<ImportarAlumnesResultDto>.Fail("Grup no trobat"));
+
+        if (fitxer is null || fitxer.Length == 0)
+            return BadRequest(ApiResponse<ImportarAlumnesResultDto>.Fail("Cal seleccionar un fitxer Excel"));
+
+        if (!fitxer.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
+            && !fitxer.FileName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(ApiResponse<ImportarAlumnesResultDto>.Fail("Cal un fitxer .xlsx o .xls"));
+
+        List<Alumne> alumnes;
+        List<string> errors;
+        try
+        {
+            using var stream = fitxer.OpenReadStream();
+            (alumnes, errors) = _importacioExcel.ParsearExcel(stream, grupId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error llegint Excel per al grup {GrupId}", grupId);
+            return BadRequest(ApiResponse<ImportarAlumnesResultDto>.Fail("No s'ha pogut llegir el fitxer Excel"));
+        }
+
+        int importats = 0;
+        foreach (var alumne in alumnes)
+        {
+            await _alumneRepo.AfegirAsync(alumne, ct);
+            importats++;
+        }
+        if (importats > 0)
+            await _alumneRepo.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Importats {Count} alumnes al grup {Grup}", importats, grup.NomComplet);
+        return Ok(ApiResponse<ImportarAlumnesResultDto>.Ok(new ImportarAlumnesResultDto
+        {
+            Importats = importats,
+            Ignorats = errors.Count(e => e.Contains("ignorat")),
+            Errors = errors
+        }));
+    }
+
+    // ── Migració d'any acadèmic ──────────────────────────────
+
+    /// <summary>
+    /// Copia tots els grups (i opcionalment els alumnes) de l'any acadèmic indicat cap a un altre.
+    /// Útil per a iniciar un nou curs sense tornar a crear tots els grups manualment.
+    /// </summary>
+    [HttpPost("anys-academics/{anyAcademicOrigenId:guid}/migrar")]
+    public async Task<ActionResult<ApiResponse<ResultatMigracioDto>>> MigrarAnyAcademic(
+        Guid anyAcademicOrigenId, [FromBody] MigrarAnyAcademicDto dto, CancellationToken ct)
+    {
+        var anyOrigen = await _calendariRepo.GetAnyAcademicPerIdAsync(anyAcademicOrigenId, ct);
+        if (anyOrigen == null) return NotFound(ApiResponse<ResultatMigracioDto>.Fail("Any acadèmic origen no trobat"));
+
+        var anyDesti = await _calendariRepo.GetAnyAcademicPerIdAsync(dto.NouAnyAcademicId, ct);
+        if (anyDesti == null) return NotFound(ApiResponse<ResultatMigracioDto>.Fail("Any acadèmic destí no trobat"));
+
+        if (anyAcademicOrigenId == dto.NouAnyAcademicId)
+            return BadRequest(ApiResponse<ResultatMigracioDto>.Fail("L'origen i el destí no poden ser el mateix any acadèmic"));
+
+        var grupsOrigen = await _grupRepo.GetPerAnyAcademicAsync(anyAcademicOrigenId, ct);
+
+        // Grups ja existents al destí (per evitar duplicats)
+        var grupsDestiExistents = await _grupRepo.GetPerAnyAcademicAsync(dto.NouAnyAcademicId, ct);
+        var clausDesti = grupsDestiExistents.Select(g => $"{g.CursId}_{g.Lletra}").ToHashSet();
+
+        int grupsCopials = 0, alumnesCopials = 0;
+
+        foreach (var grupOrigen in grupsOrigen)
+        {
+            var clau = $"{grupOrigen.CursId}_{grupOrigen.Lletra}";
+            if (clausDesti.Contains(clau)) continue;
+
+            var nouGrup = new Grup
+            {
+                CursId = grupOrigen.CursId,
+                AnyAcademicId = dto.NouAnyAcademicId,
+                Lletra = grupOrigen.Lletra,
+                TutorId = grupOrigen.TutorId,
+            };
+            await _grupRepo.AfegirAsync(nouGrup, ct);
+            await _grupRepo.SaveChangesAsync(ct);
+            grupsCopials++;
+
+            if (dto.IncloureAlumnes)
+            {
+                var alumnesOrigen = await _alumneRepo.GetPerGrupAsync(grupOrigen.Id, ct);
+                foreach (var alumne in alumnesOrigen)
+                {
+                    var nouAlumne = new Alumne
+                    {
+                        Nom = alumne.Nom,
+                        Cognom1 = alumne.Cognom1,
+                        Cognom2 = alumne.Cognom2,
+                        DataNaixement = alumne.DataNaixement,
+                        GrupId = nouGrup.Id,
+                        OrdreFusteta = alumne.OrdreFusteta,
+                        EsActiu = true,
+                    };
+                    await _alumneRepo.AfegirAsync(nouAlumne, ct);
+                    alumnesCopials++;
+                }
+                if (alumnesOrigen.Count > 0)
+                    await _alumneRepo.SaveChangesAsync(ct);
+            }
+        }
+
+        _logger.LogInformation(
+            "Migració {Origen} → {Desti}: {Grups} grups, {Alumnes} alumnes",
+            anyOrigen.Nom, anyDesti.Nom, grupsCopials, alumnesCopials);
+
+        return Ok(ApiResponse<ResultatMigracioDto>.Ok(new ResultatMigracioDto
+        {
+            GrupsCopials = grupsCopials,
+            AlumnesCopials = alumnesCopials
+        }));
+    }
+
     // ── Helpers ─────────────────────────────────────────────
 
     private static string ExtreurTextPdf(Stream stream)
@@ -826,7 +1001,14 @@ public class ConfiguracioController : ControllerBase
         AnyAcademicId = g.AnyAcademicId,
         TutorId = g.TutorId,
         TutorNomComplet = g.Tutor?.NomComplet,
-        NombreAlumnes = g.Alumnes?.Count(a => a.EsActiu) ?? 0
+        NombreAlumnes = g.Alumnes?.Count(a => a.EsActiu) ?? 0,
+        MestresAutoritzats = g.MestresAutoritzats?.Select(m => new MestreGrupDto
+        {
+            UsuariId = m.UsuariId,
+            NomComplet = m.Usuari?.NomComplet ?? string.Empty,
+            Email = m.Usuari?.Email ?? string.Empty,
+            AfegitAt = m.AfegitAt
+        }).ToList() ?? []
     };
 
     private static AnyAcademicDto MaparAnyAcademic(AnyAcademic a) => new()

@@ -42,4 +42,5 @@ public class Usuari : BaseEntity
     // Navegació
     public ICollection<Grup> GrupsTutoritzats { get; set; } = new List<Grup>();
     public ICollection<RegistreAssistencia> RegistresPassats { get; set; } = new List<RegistreAssistencia>();
+    public ICollection<GrupMestre> GrupsAutoritzats { get; set; } = new List<GrupMestre>();
 }

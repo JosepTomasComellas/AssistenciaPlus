@@ -80,7 +80,9 @@ public class AssistenciaController : BaseApiController
         {
             var grup = await _grupRepo.GetByIdAsync(dto.GrupId, ct);
             if (grup == null) return NotFound(ApiResponse<RegistreAssistenciaDto>.Fail("Grup no trobat"));
-            if (grup.TutorId != mestreId) return Forbid();
+            var esAutoritzat = grup.TutorId == mestreId
+                || await _grupRepo.EsMestreAutoritzatAsync(dto.GrupId, mestreId, ct);
+            if (!esAutoritzat) return Forbid();
         }
 
         var registre = await _assistenciaService.DesarSessioCompletaAsync(dto, mestreId, ct);
@@ -165,11 +167,48 @@ public class AssistenciaController : BaseApiController
         {
             var grup = await _grupRepo.GetByIdAsync(dto.GrupId, ct);
             if (grup == null) return NotFound(ApiResponse.Fail("Grup no trobat"));
-            if (grup.TutorId != mestreId) return Forbid();
+            var esAutoritzat = grup.TutorId == mestreId
+                || await _grupRepo.EsMestreAutoritzatAsync(dto.GrupId, mestreId, ct);
+            if (!esAutoritzat) return Forbid();
         }
 
         await _assistenciaService.AplicarAbsenciaParcialRestaDiaAsync(dto, mestreId, ct);
         return Ok(ApiResponse.Ok());
+    }
+
+    /// <summary>
+    /// Llista les sessions d'assistència de l'any acadèmic actiu (traçabilitat).
+    /// Accés restringit a EquipDirectiu.
+    /// </summary>
+    [HttpGet("sessions")]
+    [Authorize(Roles = "EquipDirectiu")]
+    public async Task<ActionResult<ApiResponse<object>>> GetSessions(
+        [FromQuery] Guid anyAcademicId,
+        [FromQuery] int pagina = 1,
+        [FromQuery] int midaPagina = 50,
+        CancellationToken ct = default)
+    {
+        midaPagina = Math.Clamp(midaPagina, 1, 200);
+        pagina = Math.Max(1, pagina);
+
+        var sessions = await _assistenciaRepo.GetSessionsAsync(anyAcademicId, pagina, midaPagina, ct);
+        var total = await _assistenciaRepo.GetSessionsCountAsync(anyAcademicId, ct);
+
+        var dtos = sessions.Select(r => new AssistenciaPlus.Application.DTOs.SessioTraçabilitatDto
+        {
+            Id = r.Id,
+            Data = r.Data,
+            GrupNom = r.Grup?.NomComplet ?? string.Empty,
+            FranjaNom = r.FranjaHoraria?.Nom ?? string.Empty,
+            MestreNomComplet = r.Mestre?.NomComplet ?? string.Empty,
+            NombreAbsents = r.Assistencies.Count(a => a.Estat == Domain.Entities.EstatAssistencia.Absent),
+            NombrePresents = r.Assistencies.Count(a => a.Estat == Domain.Entities.EstatAssistencia.Present),
+            NombreTard = r.Assistencies.Count(a => a.Estat == Domain.Entities.EstatAssistencia.Tard),
+            NombreTotal = r.Assistencies.Count,
+            DegatAt = r.DegatAt
+        });
+
+        return Ok(ApiResponse<object>.Ok(new { Total = total, Sessions = dtos }));
     }
 
     /// <summary>
